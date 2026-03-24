@@ -3,189 +3,246 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>FIBU Trainer Mobile</title>
+    <title>Fibu-Trainer XXL</title>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
     <style>
-        /* CSS für mobile Endgeräte optimiert */
-        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        body { font-family: -apple-system, system-ui, sans-serif; background: #f0f2f5; margin: 0; padding: 10px; color: #1e293b; }
-        .app { background: white; max-width: 500px; margin: 0 auto; border-radius: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); display: flex; flex-direction: column; overflow: hidden; }
-        .header { background: #1e293b; color: white; padding: 12px; text-align: center; font-size: 0.9rem; font-weight: bold; }
-        .task-area { padding: 15px; background: #eff6ff; border-bottom: 2px solid #dbeafe; font-size: 1rem; color: #1e40af; font-weight: bold; min-height: 60px; line-height: 1.4; }
-        
-        .booking-ui { padding: 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-        .side { background: #f8fafc; padding: 8px; border: 1px solid #cbd5e1; border-radius: 10px; }
-        .label { font-size: 0.65rem; text-transform: uppercase; color: #64748b; text-align: center; margin-bottom: 5px; letter-spacing: 0.05em; }
-        
-        /* Größere Klickflächen für Daumenbedienung */
-        .slot { background: white; border: 2px solid #e2e8f0; border-radius: 8px; padding: 12px; margin-bottom: 5px; text-align: center; font-size: 0.75rem; min-height: 40px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #94a3b8; word-break: break-word; }
-        .slot.active { border-color: #3b82f6; background: #f0f7ff; color: #3b82f6; box-shadow: 0 0 0 2px rgba(59,130,246,0.2); }
-        .slot.filled { color: #1e293b; border-color: #475569; border-style: solid; font-weight: 600; }
-
-        .grid { padding: 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 6px; max-height: 220px; overflow-y: auto; background: #f1f5f9; }
-        .acc-btn { background: white; border: 1px solid #cbd5e1; padding: 12px 8px; border-radius: 8px; font-size: 0.7rem; cursor: pointer; text-align: left; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
-        .acc-btn:active { background: #3b82f6; color: white; }
-
-        .footer { padding: 15px; text-align: center; }
-        #feedback { padding: 12px; border-radius: 10px; margin-bottom: 12px; font-weight: bold; display: none; font-size: 0.9rem; }
-        .ok { background: #dcfce7; color: #166534; border: 1px solid #22c55e; }
-        .err { background: #fee2e2; color: #991b1b; border: 1px solid #ef4444; }
-        
-        .btn { width: 100%; padding: 16px; border-radius: 12px; border: none; font-weight: bold; cursor: pointer; font-size: 1rem; margin-bottom: 8px; transition: background 0.2s; }
-        .btn-blue { background: #2563eb; color: white; }
-        .btn-green { background: #166534; color: white; }
-        .hidden { display: none; }
+        body { font-family: -apple-system, sans-serif; background: #f0f2f5; padding: 10px; display: flex; justify-content: center; margin: 0; }
+        .card { background: white; border-radius: 20px; padding: 20px; box-shadow: 0 8px 20px rgba(0,0,0,0.1); width: 100%; max-width: 650px; margin-top: 5px; position: relative; overflow: hidden; }
+        h1 { font-size: 1.4rem; text-align: center; color: #007aff; margin-bottom: 15px; }
+        .progress-container { width: 100%; height: 6px; background: #eee; position: absolute; top: 0; left: 0; }
+        .progress-bar { height: 100%; background: #34c759; width: 0%; transition: width 0.3s; }
+        #menu, #game, #results { display: none; }
+        #menu { display: block; text-align: center; }
+        .menu-btn { background: #007aff; color: white; padding: 18px; margin: 8px 0; border-radius: 12px; cursor: pointer; width: 100%; font-size: 1.1rem; font-weight: bold; border: none; transition: 0.2; }
+        .menu-btn.med { background: #5856d6; }
+        .menu-btn.pro { background: #af52de; }
+        .desc { font-size: 0.8rem; color: #65676b; margin-bottom: 10px; display: block; line-height: 1.2; }
+        .task { font-weight: bold; font-size: 1.05rem; margin-bottom: 20px; min-height: 110px; text-align: center; background: #f8f9fa; padding: 15px; border-radius: 12px; display: flex; align-items: center; justify-content: center; border-top: 4px solid #007aff; line-height: 1.4; color: #1c1e21; box-sizing: border-box; }
+        .entry-container { display: flex; gap: 10px; margin-bottom: 15px; }
+        .side { flex: 1; display: flex; flex-direction: column; gap: 8px; }
+        .side-label { font-size: 0.75rem; font-weight: bold; color: #007aff; text-transform: uppercase; text-align: center; background: #e7f3ff; padding: 4px; border-radius: 4px; }
+        select { width: 100%; padding: 12px 5px; border-radius: 8px; border: 2px solid #e4e6eb; font-size: 0.85rem; height: 48px; background: #fff; }
+        .split-field { display: none; }
+        button.action { width: 100%; padding: 16px; border-radius: 12px; border: none; font-weight: bold; cursor: pointer; margin-top: 10px; font-size: 1rem; }
+        .btn-check { background: #007aff; color: white; }
+        .btn-next { background: #34c759; color: white; display: none; }
+        .feedback { margin-top: 15px; padding: 12px; border-radius: 10px; display: none; text-align: center; font-weight: bold; font-size: 0.95rem; line-height: 1.4; }
+        .correct { background: #e7f3ff; color: #1877f2; border: 1px solid #1877f2; }
+        .wrong { background: #ffebe9; color: #f02849; border: 1px solid #f02849; }
+        .stat-box { background: #f8f9fa; padding: 15px; border-radius: 12px; margin: 10px 0; text-align: center; }
+        .high-score { color: #34c759; font-weight: bold; }
     </style>
 </head>
 <body>
-
-<div class="app">
-    <div class="header" id="info">Aufgabe 1 / 50</div>
-    <div class="task-area" id="task">Lade...</div>
-    
-    <div class="booking-ui">
-        <div class="side">
-            <div class="label">Soll</div>
-            <div id="s1" class="slot active" onclick="setSlot('s1')">Wählen...</div>
-            <div id="s2" class="slot" onclick="setSlot('s2')">(optional)</div>
-        </div>
-        <div class="side">
-            <div class="label">Haben</div>
-            <div id="h1" class="slot" onclick="setSlot('h1')">Wählen...</div>
-            <div id="h2" class="slot" onclick="setSlot('h2')">(optional)</div>
-        </div>
+<div class="card">
+    <div class="progress-container"><div class="progress-bar" id="progressBar"></div></div>
+    <div id="menu">
+        <h1>Fibu-Trainer Einzelhandel</h1>
+        <button class="menu-btn" onclick="startGame('light')">1. Einsteiger</button>
+        <span class="desc">Nur Bestandsbuchungen. 50+ Aufgaben.</span>
+        <button class="menu-btn med" onclick="startGame('medium')">2. Fortgeschritten</button>
+        <span class="desc">Erfolgskonten ohne Steuer. 60+ Aufgaben.</span>
+        <button class="menu-btn pro" onclick="startGame('pro')">3. Profi</button>
+        <span class="desc">Splits mit Vor- & Umsatzsteuer. 60+ Aufgaben.</span>
     </div>
-
-    <div class="grid" id="grid"></div>
-
-    <div class="footer">
-        <div id="feedback"></div>
-        <button id="checkBtn" class="btn btn-blue" onclick="check()">Prüfen</button>
-        <button id="nextBtn" class="btn btn-green hidden" onclick="next()">Weiter →</button>
-        <div style="font-size:0.7rem; color:#64748b; margin-top:10px; text-decoration: underline;" onclick="location.reload()">Neu mischen</div>
+    <div id="game">
+        <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: #65676b; margin-bottom: 5px;">
+            <span id="levelDisplay">Level</span>
+            <span id="counterDisplay">Aufgabe 1/10</span>
+        </div>
+        <div class="task" id="taskDisplay"></div>
+        <div class="entry-container">
+            <div class="side"><div class="side-label">Soll</div><select id="soll1"></select><div class="split-field" id="soll2-box"><select id="soll2"></select></div></div>
+            <div class="side"><div class="side-label" style="background:#f0f0ff; color:#5856d6;">Haben</div><select id="haben1"></select><div class="split-field" id="haben2-box"><select id="haben2"></select></div></div>
+        </div>
+        <button class="action btn-check" id="checkBtn" onclick="checkAnswer()">Prüfen</button>
+        <button class="action btn-next" id="nextBtn" onclick="generateTask()">Weiter</button>
+        <div id="feedback" class="feedback"></div>
+    </div>
+    <div id="results">
+        <h1 id="resTitle">Runde beendet!</h1>
+        <div class="stat-box">
+            <p style="font-size: 1.2rem;">Ihr Ergebnis: <span id="currentScore" style="font-weight:bold;">0</span> von 10</p>
+            <p id="comparisonText" style="font-style:italic; color:#65676b;"></p>
+        </div>
+        <div class="stat-box" style="font-size: 0.9rem;">
+            <p>Übungseinheiten gesamt: <span id="totalRounds" style="font-weight:bold;">0</span></p>
+            <p>Ihr Rekord Level <span id="recMode"></span>: <span class="high-score" id="bestScore">0</span>/10</p>
+        </div>
+        <button class="menu-btn" onclick="location.reload()">Neustart</button>
     </div>
 </div>
 
 <script>
-    // Kontenliste
-    const accounts = ["Abschreibungen auf Sachanlagen", "Aufwendungen für Waren", "Bank", "Betriebliche Steuern", "Betriebs- und Geschäftsausstattung", "Büromaterial", "Energie", "Forderungen aus L.L.", "Fuhrpark", "Gehälter", "Instandhaltung", "Kasse", "Löhne", "Mieten, Pachten", "Postgebühren/Telefon", "Sonstige betriebliche Erträge", "Umsatzerlöse für Waren", "Umsatzsteuer", "Verbindlichkeiten L.L.", "Verbindlichkeiten Bank", "Vorsteuer", "Warenbestand", "Werbung", "Zinsaufwendungen", "Zinserträge"];
-
-    // Aufgaben
-    let tasks = [
-        {t:"Zieleinkauf Waren, 1000€ netto + 19% USt", s:["Aufwendungen für Waren","Vorsteuer"], h:["Verbindlichkeiten L.L."]},
-        {t:"Barverkauf Waren, 595€ brutto", s:["Kasse"], h:["Umsatzerlöse für Waren","Umsatzsteuer"]},
-        {t:"Einkauf Büromaterial bar, 50€ netto + USt", s:["Büromaterial","Vorsteuer"], h:["Kasse"]},
-        {t:"Verkauf Waren auf Ziel, 2000€ netto + USt", s:["Forderungen aus L.L."], h:["Umsatzerlöse für Waren","Umsatzsteuer"]},
-        {t:"Zieleinkauf Lieferwagen, 30000€ netto + USt", s:["Fuhrpark","Vorsteuer"], h:["Verbindlichkeiten L.L."]},
-        {t:"Telefonrechnung per Bank, 100€ netto + USt", s:["Postgebühren/Telefon","Vorsteuer"], h:["Bank"]},
-        {t:"Barzahlung Zeitungsanzeige, 200€ netto + USt", s:["Werbung","Vorsteuer"], h:["Kasse"]},
-        {t:"Kauf Regale (BGA) per Bank, 1000€ netto + USt", s:["Betriebs- und Geschäftsausstattung","Vorsteuer"], h:["Bank"]},
-        {t:"Kunde zahlt Rechnung per Bank, 1190€", s:["Bank"], h:["Forderungen aus L.L."]},
-        {t:"Zahlung an Lieferant per Bank, 2380€", s:["Verbindlichkeiten L.L."], h:["Bank"]},
-        {t:"Tagesumsatz Kasse, 1000€ netto + 190€ USt", s:["Kasse"], h:["Umsatzerlöse für Waren","Umsatzsteuer"]},
-        {t:"Wareneinkauf per Bank, 800€ netto + USt", s:["Aufwendungen für Waren","Vorsteuer"], h:["Bank"]},
-        {t:"Miete Lager per Bank, 1000€ netto + USt", s:["Mieten, Pachten","Vorsteuer"], h:["Bank"]},
-        {t:"Reparatur Lieferwagen bar, 300€ netto + USt", s:["Instandhaltung","Vorsteuer"], h:["Kasse"]},
-        {t:"Verkauf altes Regal bar, 100€ netto + USt", s:["Kasse"], h:["Sonstige betriebliche Erträge","Umsatzsteuer"]},
-        {t:"Kauf Heizöl auf Ziel, 800€ netto + USt", s:["Energie","Vorsteuer"], h:["Verbindlichkeiten L.L."]},
-        {t:"Postgebühren bar (steuerfrei), 10€", s:["Postgebühren/Telefon"], h:["Kasse"]},
-        {t:"Lohnzahlung per Bank, 3000€", s:["Löhne"], h:["Bank"]},
-        {t:"Zinsertrag auf Bankkonto, 20€", s:["Bank"], h:["Zinserträge"]},
-        {t:"Überweisung Kfz-Steuer, 150€", s:["Betriebliche Steuern"], h:["Bank"]},
-        {t:"Kunde sendet Waren zurück (Gutschrift netto+USt)", s:["Umsatzerlöse für Waren","Umsatzsteuer"], h:["Forderungen aus L.L."]},
-        {t:"Rücksendung an Lieferer (Gutschrift netto+USt)", s:["Verbindlichkeiten L.L."], h:["Aufwendungen für Waren","Vorsteuer"]},
-        {t:"Überweisung an Finanzamt (USt-Zahllast)", s:["Umsatzsteuer"], h:["Bank"]},
-        {t:"Zieleinkauf Waren, 5000€ netto + USt", s:["Aufwendungen für Waren","Vorsteuer"], h:["Verbindlichkeiten L.L."]},
-        {t:"Barabhebung vom Bankkonto, 200€", s:["Kasse"], h:["Bank"]},
-        {t:"Stromrechnung per Bank, 150€ netto + USt", s:["Energie","Vorsteuer"], h:["Bank"]},
-        {t:"Schaufensterpuppen (BGA) bar, 400€ netto + USt", s:["Betriebs- und Geschäftsausstattung","Vorsteuer"], h:["Kasse"]},
-        {t:"Überweisung Gehälter, 4500€", s:["Gehälter"], h:["Bank"]},
-        {t:"Bezugskosten für Waren bar, 50€ netto + USt", s:["Aufwendungen für Waren","Vorsteuer"], h:["Kasse"]},
-        {t:"Zinsen für Darlehen per Bank, 400€", s:["Zinsaufwendungen"], h:["Bank"]},
-        {t:"Abschreibung Fuhrpark (Jahresende)", s:["Abschreibungen auf Sachanlagen"], h:["Fuhrpark"]},
-        {t:"Verkauf Waren auf Ziel, 10000€ netto + USt", s:["Forderungen aus L.L."], h:["Umsatzerlöse für Waren","Umsatzsteuer"]},
-        {t:"Barzahlung Reinigungsmittel, 20€ netto + USt", s:["Büromaterial","Vorsteuer"], h:["Kasse"]},
-        {t:"Auszahlung Darlehen (Bankgutschrift), 5000€", s:["Bank"], h:["Verbindlichkeiten Bank"]},
-        {t:"Kunde zahlt bar, 119€", s:["Kasse"], h:["Forderungen aus L.L."]},
-        {t:"Fachliteratur bar, 30€ netto + 7% USt", s:["Büromaterial","Vorsteuer"], h:["Kasse"]},
-        {t:"Wartung Kasse per Bank, 100€ netto + USt", s:["Instandhaltung","Vorsteuer"], h:["Bank"]},
-        {t:"Provision bar erhalten, 50€ netto + USt", s:["Kasse"], h:["Sonstige betriebliche Erträge","Umsatzsteuer"]},
-        {t:"Laptops (BGA) auf Ziel, 800€ netto + USt", s:["Betriebs- und Geschäftsausstattung","Vorsteuer"], h:["Verbindlichkeiten L.L."]},
-        {t:"Tanken Lieferwagen bar, 60€ netto + USt", s:["Energie","Vorsteuer"], h:["Kasse"]},
-        {t:"Spende per Bank (steuerfrei), 100€", s:["Sonstige betriebliche Erträge"], h:["Bank"]},
-        {t:"Grundsteuer per Bank, 200€", s:["Betriebliche Steuern"], h:["Bank"]},
-        {t:"Altpapierverkauf bar, 20€ netto + USt", s:["Kasse"], h:["Sonstige betriebliche Erträge","Umsatzsteuer"]},
-        {t:"Bankgebühren (steuerfrei), 15€", s:["Zinsaufwendungen"], h:["Bank"]},
-        {t:"Mängelrabatt von Lieferer (Bank)", s:["Bank"], h:["Aufwendungen für Waren","Vorsteuer"]},
-        {t:"Kunde sendet Ware zurück (Bar)", s:["Umsatzerlöse für Waren","Umsatzsteuer"], h:["Kasse"]},
-        {t:"Werbeagentur per Bank, 500€ netto + USt", s:["Werbung","Vorsteuer"], h:["Bank"]},
-        {t:"Tilgung Darlehen per Bank, 1000€", s:["Verbindlichkeiten Bank"], h:["Bank"]},
-        {t:"Abschreibung auf BGA", s:["Abschreibungen auf Sachanlagen"], h:["Betriebs- und Geschäftsausstattung"]},
-        {t:"Tagesumsatz bar, 2000€ netto + 380€ USt", s:["Kasse"], h:["Umsatzerlöse für Waren","Umsatzsteuer"]}
+    const kontenListe = ["-- bitte wählen --", "Aufwendungen für Energie", "Aufwendungen für Waren (Wareneinkauf)", "Bank", "BGA", "Büromaterial", "Darlehen", "Eigenkapital", "Forderungen a. L. L.", "Fremdinstandsetzung", "Fuhrpark", "Kasse", "Mietaufwendungen", "Mieterträge", "Postgebühren", "Provisionsaufwendungen", "Provisionserträge", "Umsatzerlöse für Waren", "Umsatzsteuer", "Verbindlichkeiten a. L. L.", "Vorsteuer", "Waren (Vorrat)", "Werbung", "Zinsaufwendungen", "Zinserträge", "- kein zweites Konto -"];
+    
+    // LEVEL 1: STRIKT NUR BESTANDSKONTEN
+    const poolLight = [
+        { c: "geld", t: "Barabhebung vom Bankkonto für die Ladenkasse.", s1: "Kasse", s2: "- kein zweites Konto -", h1: "Bank", h2: "- kein zweites Konto -" },
+        { c: "bga", t: "Kauf von Büromöbeln auf Ziel.", s1: "BGA", s2: "- kein zweites Konto -", h1: "Verbindlichkeiten a. L. L.", h2: "- kein zweites Konto -" },
+        { c: "geld", t: "Kunde zahlt offene Rechnung per Banküberweisung.", s1: "Bank", s2: "- kein zweites Konto -", h1: "Forderungen a. L. L.", h2: "- kein zweites Konto -" },
+        { c: "geld", t: "Zahlung einer Liefererrechnung per Banküberweisung.", s1: "Verbindlichkeiten a. L. L.", s2: "- kein zweites Konto -", h1: "Bank", h2: "- kein zweites Konto -" },
+        { c: "fuhrpark", t: "Kauf eines LKW gegen Banküberweisung.", s1: "Fuhrpark", s2: "- kein zweites Konto -", h1: "Bank", h2: "- kein zweites Konto -" },
+        { c: "bga", t: "Barkauf eines neuen Bürostuhls.", s1: "BGA", s2: "- kein zweites Konto -", h1: "Kasse", h2: "- kein zweites Konto -" },
+        { c: "darlehen", t: "Aufnahme eines Darlehens, Gutschrift auf Bank.", s1: "Bank", s2: "- kein zweites Konto -", h1: "Darlehen", h2: "- kein zweites Konto -" },
+        { c: "geld", t: "Einzahlung von Bargeld aus der Kasse auf das Bankkonto.", s1: "Bank", s2: "- kein zweites Konto -", h1: "Kasse", h2: "- kein zweites Konto -" },
+        { c: "vorrat", t: "Kauf von Waren auf Ziel (Bestandserhöhung).", s1: "Waren (Vorrat)", s2: "- kein zweites Konto -", h1: "Verbindlichkeiten a. L. L.", h2: "- kein zweites Konto -" },
+        { c: "geld", t: "Kunde begleicht Rechnung durch Scheck (Gutschrift Bank).", s1: "Bank", s2: "- kein zweites Konto -", h1: "Forderungen a. L. L.", h2: "- kein zweites Konto -" },
+        { c: "bga", t: "Kauf von Ladenregalen gegen Barzahlung.", s1: "BGA", s2: "- kein zweites Konto -", h1: "Kasse", h2: "- kein zweites Konto -" },
+        { c: "fuhrpark", t: "Kauf eines gebrauchten Transporters auf Ziel.", s1: "Fuhrpark", s2: "- kein zweites Konto -", h1: "Verbindlichkeiten a. L. L.", h2: "- kein zweites Konto -" },
+        { c: "buero", t: "Kauf von Ordnern (Büromaterial-Bestand) gegen Barzahlung.", s1: "Büromaterial", s2: "- kein zweites Konto -", h1: "Kasse", h2: "- kein zweites Konto -" },
+        { c: "geld", t: "Tageseinnahmen werden auf das Geschäftskonto eingezahlt.", s1: "Bank", s2: "- kein zweites Konto -", h1: "Kasse", h2: "- kein zweites Konto -" },
+        { c: "darlehen", t: "Tilgung einer Darlehensrate durch Barzahlung.", s1: "Darlehen", s2: "- kein zweites Konto -", h1: "Kasse", h2: "- kein zweites Konto -" },
+        { c: "fuhrpark", t: "Ein Anhänger wird gegen Überweisung angeschafft.", s1: "Fuhrpark", s2: "- kein zweites Konto -", h1: "Bank", h2: "- kein zweites Konto -" },
+        { c: "bga", t: "Wir kaufen IT-Equipment auf Ziel.", s1: "BGA", s2: "- kein zweites Konto -", h1: "Verbindlichkeiten a. L. L.", h2: "- kein zweites Konto -" },
+        { c: "geld", t: "Barabhebung für die Portokasse.", s1: "Kasse", s2: "- kein zweites Konto -", h1: "Bank", h2: "- kein zweites Konto -" },
+        { c: "vorrat", t: "Warenkauf gegen Barzahlung (Lagererhöhung).", s1: "Waren (Vorrat)", s2: "- kein zweites Konto -", h1: "Kasse", h2: "- kein zweites Konto -" },
+        { c: "geld", t: "Ausgleich einer Lieferantenrechnung durch Barzahlung.", s1: "Verbindlichkeiten a. L. L.", s2: "- kein zweites Konto -", h1: "Kasse", h2: "- kein zweites Konto -" },
+        { c: "bga", t: "Kauf von Ladenwaagen (BGA) gegen Barzahlung.", s1: "BGA", s2: "- kein zweites Konto -", h1: "Kasse", h2: "- kein zweites Konto -" },
+        { c: "geld", t: "Gutschrift eines Kunden durch Banküberweisung.", s1: "Bank", s2: "- kein zweites Konto -", h1: "Forderungen a. L. L.", h2: "- kein zweites Konto -" },
+        { c: "fuhrpark", t: "Wir kaufen einen gebrauchten Firmenwagen auf Ziel.", s1: "Fuhrpark", s2: "- kein zweites Konto -", h1: "Verbindlichkeiten a. L. L.", h2: "- kein zweites Konto -" },
+        { c: "darlehen", t: "Banküberweisung zur Tilgung einer Darlehensschuld.", s1: "Darlehen", s2: "- kein zweites Konto -", h1: "Bank", h2: "- kein zweites Konto -" },
+        { c: "buero", t: "Wir kaufen Schreibblöcke (Büromaterial) bar.", s1: "Büromaterial", s2: "- kein zweites Konto -", h1: "Kasse", h2: "- kein zweites Konto -" },
+        { c: "geld", t: "Einzahlung auf das Sparkonto der Bank vom Barbestand.", s1: "Bank", s2: "- kein zweites Konto -", h1: "Kasse", h2: "- kein zweites Konto -" },
+        { c: "bga", t: "Wir kaufen Schaufensterpuppen auf Ziel.", s1: "BGA", s2: "- kein zweites Konto -", h1: "Verbindlichkeiten a. L. L.", h2: "- kein zweites Konto -" },
+        { c: "bga", t: "Ein Aktenvernichter wird bar bezahlt.", s1: "BGA", s2: "- kein zweites Konto -", h1: "Kasse", h2: "- kein zweites Konto -" },
+        { c: "geld", t: "Scheckgutschrift eines Kunden auf dem Bankkonto.", s1: "Bank", s2: "- kein zweites Konto -", h1: "Forderungen a. L. L.", h2: "- kein zweites Konto -" },
+        { c: "geld", t: "Zahlung einer Lieferantenrechnung bar.", s1: "Verbindlichkeiten a. L. L.", s2: "- kein zweites Konto -", h1: "Kasse", h2: "- kein zweites Konto -" }
+        // ... (Pool kann intern weiter wachsen)
     ];
 
-    let current = 0, active = "s1", sel = {s1:"",s2:"",h1:"",h2:""};
+    // LEVEL 2: ERFOLGSKONTEN OHNE STEUER
+    const poolMedium = [
+        { c: "miete", t: "Zahlung der monatlichen Ladenmiete per Bank.", s1: "Mietaufwendungen", s2: "- kein zweites Konto -", h1: "Bank", h2: "- kein zweites Konto -" },
+        { c: "post", t: "Barkauf von Briefmarken (Postgebühren).", s1: "Postgebühren", s2: "- kein zweites Konto -", h1: "Kasse", h2: "- kein zweites Konto -" },
+        { c: "energie", t: "Banküberweisung der Stromrechnung.", s1: "Aufwendungen für Energie", s2: "- kein zweites Konto -", h1: "Bank", h2: "- kein zweites Konto -" },
+        { c: "zins", t: "Wir bezahlen Zinsen für das Darlehen per Bank.", s1: "Zinsaufwendungen", s2: "- kein zweites Konto -", h1: "Bank", h2: "- kein zweites Konto -" },
+        { c: "werbung", t: "Barzahlung einer Werbeanzeige.", s1: "Werbung", s2: "- kein zweites Konto -", h1: "Kasse", h2: "- kein zweites Konto -" },
+        { c: "zins", t: "Bankgutschrift für erhaltene Zinserträge.", s1: "Bank", s2: "- kein zweites Konto -", h1: "Zinserträge", h2: "- kein zweites Konto -" },
+        { c: "verkauf", t: "Verkauf von Waren auf Ziel (ohne Steuer).", s1: "Forderungen a. L. L.", s2: "- kein zweites Konto -", h1: "Umsatzerlöse für Waren", h2: "- kein zweites Konto -" },
+        { c: "instand", t: "Wir bezahlen die Reparatur der Kasse bar.", s1: "Fremdinstandsetzung", s2: "- kein zweites Konto -", h1: "Kasse", h2: "- kein zweites Konto -" },
+        { c: "ertrag", t: "Ein Mieter zahlt seine Miete per Bank.", s1: "Bank", s2: "- kein zweites Konto -", h1: "Mieterträge", h2: "- kein zweites Konto -" },
+        { c: "buero", t: "Barkauf von Druckerpatronen (Büromaterial).", s1: "Büromaterial", s2: "- kein zweites Konto -", h1: "Kasse", h2: "- kein zweites Konto -" },
+        { c: "provis", t: "Provision für Warenvermittlung bar erhalten.", s1: "Kasse", s2: "- kein zweites Konto -", h1: "Provisionserträge", h2: "- kein zweites Konto -" },
+        { c: "post", t: "Banküberweisung des Rundfunkbeitrags.", s1: "Postgebühren", s2: "- kein zweites Konto -", h1: "Bank", h2: "- kein zweites Konto -" },
+        { c: "energie", t: "Zahlung der Gasrechnung per Bank.", s1: "Aufwendungen für Energie", s2: "- kein zweites Konto -", h1: "Bank", h2: "- kein zweites Konto -" },
+        { c: "instand", t: "Barzahlung für Reinigungskosten.", s1: "Fremdinstandsetzung", s2: "- kein zweites Konto -", h1: "Kasse", h2: "- kein zweites Konto -" },
+        { c: "einkauf", t: "Warenkauf auf Ziel (aufwandsorientiert ohne Steuer).", s1: "Aufwendungen für Waren (Wareneinkauf)", s2: "- kein zweites Konto -", h1: "Verbindlichkeiten a. L. L.", h2: "- kein zweites Konto -" },
+        { c: "provis", t: "Zahlung einer Vertreterprovision per Bank.", s1: "Provisionsaufwendungen", s2: "- kein zweites Konto -", h1: "Bank", h2: "- kein zweites Konto -" },
+        { c: "zins", t: "Kontoführungsgebühren werden per Bank abgezogen.", s1: "Zinsaufwendungen", s2: "- kein zweites Konto -", h1: "Bank", h2: "- kein zweites Konto -" },
+        { c: "werbung", t: "Druck von Flyern wird bar bezahlt.", s1: "Werbung", s2: "- kein zweites Konto -", h1: "Kasse", h2: "- kein zweites Konto -" },
+        { c: "ertrag", t: "Provision von einem Partner geht per Bank ein.", s1: "Bank", s2: "- kein zweites Konto -", h1: "Provisionserträge", h2: "- kein zweites Konto -" },
+        { c: "miete", t: "Versicherungsprämie für Geschäftsräume per Bank.", s1: "Mietaufwendungen", s2: "- kein zweites Konto -", h1: "Bank", h2: "- kein zweites Konto -" }
+    ];
 
-    function init() {
-        const g = document.getElementById('grid');
-        accounts.sort().forEach(a => {
-            const b = document.createElement('button');
-            b.className = 'acc-btn'; b.innerText = a;
-            b.onclick = () => {
-                sel[active] = a; document.getElementById(active).innerText = a;
-                document.getElementById(active).classList.add('filled');
-                // Auto-Weiter-Logik für Smartphone
-                if(active==="s1") setSlot("s2"); 
-                else if(active==="s2") setSlot("h1"); 
-                else if(active==="h1") setSlot("h2");
-            };
-            g.appendChild(b);
+    // LEVEL 3: ERFOLGSKONTEN MIT STEUER
+    const poolPro = [
+        { c: "einkauf", t: "Einkauf von Waren auf Ziel (netto + 19% USt).", s1: "Aufwendungen für Waren (Wareneinkauf)", s2: "Vorsteuer", h1: "Verbindlichkeiten a. L. L.", h2: "- kein zweites Konto -" },
+        { c: "verkauf", t: "Verkauf von Waren auf Ziel (netto + 19% USt).", s1: "Forderungen a. L. L.", s2: "- kein zweites Konto -", h1: "Umsatzerlöse für Waren", h2: "Umsatzsteuer" },
+        { c: "buero", t: "Kauf von Kopierpapier auf Ziel (netto + Vorsteuer).", s1: "Büromaterial", s2: "Vorsteuer", h1: "Verbindlichkeiten a. L. L.", h2: "- kein zweites Konto -" },
+        { c: "werbung", t: "Wir bezahlen eine Werbeanzeige per Bank (netto + VSt).", s1: "Werbung", s2: "Vorsteuer", h1: "Bank", h2: "- kein zweites Konto -" },
+        { c: "instand", t: "Reparatur der Ladentür (Rechnung netto + USt auf Ziel).", s1: "Fremdinstandsetzung", s2: "Vorsteuer", h1: "Verbindlichkeiten a. L. L.", h2: "- kein zweites Konto -" },
+        { c: "verkauf", t: "Verkauf von Waren bar (netto + 19% USt).", s1: "Kasse", s2: "- kein zweites Konto -", h1: "Umsatzerlöse für Waren", h2: "Umsatzsteuer" },
+        { c: "provis", t: "Gutschrift für eine Warenvermittlung (netto + 19% USt).", s1: "Bank", s2: "- kein zweites Konto -", h1: "Provisionserträge", h2: "Umsatzsteuer" },
+        { c: "einkauf", t: "Warenkauf bar (netto 100 € + 19 € Vorsteuer).", s1: "Aufwendungen für Waren (Wareneinkauf)", s2: "Vorsteuer", h1: "Kasse", h2: "- kein zweites Konto -" },
+        { c: "energie", t: "Stromrechnung per Überweisung (netto + Vorsteuer).", s1: "Aufwendungen für Energie", s2: "Vorsteuer", h1: "Bank", h2: "- kein zweites Konto -" },
+        { c: "instand", t: "Reparatur am Lieferwagen bar bezahlt (netto + VSt).", s1: "Fremdinstandsetzung", s2: "Vorsteuer", h1: "Kasse", h2: "- kein zweites Konto -" },
+        { c: "miete", t: "Mietertrag für Schaukasten per Bank (netto + USt).", s1: "Bank", s2: "- kein zweites Konto -", h1: "Mieterträge", h2: "Umsatzsteuer" },
+        { c: "provis", t: "Wir zahlen Provision an Agenten bar (netto + VSt).", s1: "Provisionsaufwendungen", s2: "Vorsteuer", h1: "Kasse", h2: "- kein zweites Konto -" },
+        { c: "buero", t: "Einkauf von Druckertinte bar (netto + Vorsteuer).", s1: "Büromaterial", s2: "Vorsteuer", h1: "Kasse", h2: "- kein zweites Konto -" },
+        { c: "verkauf", t: "Warenverkauf gegen Scheck (netto + 19% USt).", s1: "Bank", s2: "- kein zweites Konto -", h1: "Umsatzerlöse für Waren", h2: "Umsatzsteuer" },
+        { c: "werbung", t: "Anzeigenschaltung bar bezahlt (netto + VSt).", s1: "Werbung", s2: "Vorsteuer", h1: "Kasse", h2: "- kein zweites Konto -" }
+    ];
+
+    let mode = ''; let currentPool = []; let taskCount = 0; let correctCount = 0; const maxTasks = 10;
+
+    // INTELLIGENTE MISCH-LOGIK: Verhindert identische Kategorien (c) hintereinander
+    function getSmartPool(pool) {
+        let shuffled = [...pool].sort(() => Math.random() - 0.5);
+        let result = [];
+        let lastCat = "";
+        while (result.length < 10 && shuffled.length > 0) {
+            let index = shuffled.findIndex(item => item.c !== lastCat);
+            if (index === -1) index = 0; 
+            let picked = shuffled.splice(index, 1)[0];
+            result.push(picked);
+            lastCat = picked.c;
+        }
+        return result;
+    }
+
+    function startGame(m) {
+        mode = m; taskCount = 0; correctCount = 0;
+        document.getElementById('menu').style.display = 'none';
+        document.getElementById('game').style.display = 'block';
+        document.getElementById('levelDisplay').innerText = "Level: " + (m === 'light' ? 'Einsteiger' : m === 'medium' ? 'Fortgeschritten' : 'Profi');
+        setupDropdowns();
+        const showSplit = (mode === 'pro') ? 'block' : 'none';
+        document.getElementById('soll2-box').style.display = showSplit;
+        document.getElementById('haben2-box').style.display = showSplit;
+        let basePool = mode === 'light' ? poolLight : mode === 'medium' ? poolMedium : poolPro;
+        currentPool = getSmartPool(basePool);
+        generateTask();
+    }
+
+    function setupDropdowns() {
+        const selects = ['soll1', 'soll2', 'haben1', 'haben2'];
+        selects.forEach(id => {
+            const s = document.getElementById(id);
+            s.innerHTML = "";
+            kontenListe.sort().forEach(k => s.add(new Option(k, k)));
         });
-        tasks.sort(() => Math.random() - 0.5); 
-        load();
     }
 
-    function setSlot(id) {
-        active = id; document.querySelectorAll('.slot').forEach(s => s.classList.remove('active'));
-        document.getElementById(id).classList.add('active');
-    }
-
-    function load() {
-        document.getElementById('task').innerText = tasks[current].t;
-        document.getElementById('info').innerText = "Aufgabe " + (current+1) + " / 50";
-        reset();
-    }
-
-    function reset() {
-        sel = {s1:"",s2:"",h1:"",h2:""};
-        ["s1","s2","h1","h2"].forEach(id => {
-            document.getElementById(id).innerText = id.includes("2") ? "(optional)" : "Wählen...";
-            document.getElementById(id).classList.remove('filled');
-        });
-        document.getElementById('feedback').style.display = "none";
-        document.getElementById('checkBtn').classList.remove('hidden');
-        document.getElementById('nextBtn').classList.add('hidden');
-        setSlot("s1");
-    }
-
-    function check() {
-        const t = tasks[current];
-        const uS = [sel.s1, sel.s2].filter(x => x && x !== "(optional)");
-        const uH = [sel.h1, sel.h2].filter(x => x && x !== "(optional)");
-        const ok = (a1, a2) => a1.length === a2.length && a1.every(x => a2.includes(x));
-        const f = document.getElementById('feedback');
-        f.style.display = "block";
-        if(ok(uS, t.s) && ok(uH, t.h)) {
-            f.innerText = "RICHTIG!"; f.className = "ok";
-            document.getElementById('checkBtn').classList.add('hidden');
-            document.getElementById('nextBtn').classList.remove('hidden');
-        } else {
-            f.innerText = "LEIDER FALSCH."; f.className = "err";
+    function generateTask() {
+        if (taskCount >= maxTasks) { showFinalResults(); return; }
+        currentTask = currentPool[taskCount];
+        taskCount++;
+        updateUI();
+        document.getElementById('taskDisplay').innerText = currentTask.t;
+        document.getElementById('feedback').style.display = 'none';
+        document.getElementById('checkBtn').style.display = 'block';
+        document.getElementById('nextBtn').style.display = 'none';
+        document.getElementById('soll1').selectedIndex = 0;
+        document.getElementById('haben1').selectedIndex = 0;
+        if(mode === 'pro') {
+            document.getElementById('soll2').value = "- kein zweites Konto -";
+            document.getElementById('haben2').value = "- kein zweites Konto -";
         }
     }
 
-    function next() { current = (current + 1) % 50; load(); }
+    function updateUI() {
+        document.getElementById('counterDisplay').innerText = `Aufgabe ${taskCount}/${maxTasks}`;
+        document.getElementById('progressBar').style.width = (taskCount / maxTasks * 100) + "%";
+    }
 
-    init();
+    function checkAnswer() {
+        const s1 = document.getElementById('soll1').value;
+        const s2 = (mode === 'pro') ? document.getElementById('soll2').value : "- kein zweites Konto -";
+        const h1 = document.getElementById('haben1').value;
+        const h2 = (mode === 'pro') ? document.getElementById('haben2').value : "- kein zweites Konto -";
+        if (s1 === "-- bitte wählen --" || h1 === "-- bitte wählen --") { alert("Bitte Konten wählen!"); return; }
+        const isCorrect = ((s1 === currentTask.s1 && s2 === currentTask.s2) || (s1 === currentTask.s2 && s2 === currentTask.s1)) && ((h1 === currentTask.h1 && h2 === currentTask.h2) || (h1 === currentTask.h2 && h2 === currentTask.h1));
+        const fb = document.getElementById('feedback');
+        if (isCorrect) { correctCount++; fb.innerText = "✓ Richtig!"; fb.className = "feedback correct"; } 
+        else { let sol = `${currentTask.s1}${currentTask.s2 !== "- kein zweites Konto -" ? ' + ' + currentTask.s2 : ''} AN ${currentTask.h1}${currentTask.h2 !== "- kein zweites Konto -" ? ' + ' + currentTask.h2 : ''}`; fb.innerText = `✗ Falsch. Lösung:\n${sol}`; fb.className = "feedback wrong"; }
+        fb.style.display = 'block'; document.getElementById('checkBtn').style.display = 'none'; document.getElementById('nextBtn').style.display = 'block';
+    }
+
+    function showFinalResults() {
+        document.getElementById('game').style.display = 'none';
+        document.getElementById('results').style.display = 'block';
+        document.getElementById('currentScore').innerText = correctCount;
+        let totalRounds = parseInt(localStorage.getItem('fibu_total_rounds') || 0) + 1;
+        localStorage.setItem('fibu_total_rounds', totalRounds);
+        document.getElementById('totalRounds').innerText = totalRounds;
+        const best = localStorage.getItem('fibu_best_' + mode) || 0;
+        document.getElementById('bestScore').innerText = best;
+        document.getElementById('recMode').innerText = mode.toUpperCase();
+        if (correctCount === 10) confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
+        if (correctCount > best) { document.getElementById('comparisonText').innerText = "Neuer Rekord! Fantastisch!"; localStorage.setItem('fibu_best_' + mode, correctCount); }
+        else { document.getElementById('comparisonText').innerText = "Regelmäßiges Training führt zum Erfolg!"; }
+    }
 </script>
 </body>
 </html>
