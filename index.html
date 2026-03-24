@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>FIBU Trainer Mobile</title>
+    <style>
+        /* CSS für mobile Endgeräte optimiert */
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { font-family: -apple-system, system-ui, sans-serif; background: #f0f2f5; margin: 0; padding: 10px; color: #1e293b; }
+        .app { background: white; max-width: 500px; margin: 0 auto; border-radius: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); display: flex; flex-direction: column; overflow: hidden; }
+        .header { background: #1e293b; color: white; padding: 12px; text-align: center; font-size: 0.9rem; font-weight: bold; }
+        .task-area { padding: 15px; background: #eff6ff; border-bottom: 2px solid #dbeafe; font-size: 1rem; color: #1e40af; font-weight: bold; min-height: 60px; line-height: 1.4; }
+        
+        .booking-ui { padding: 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .side { background: #f8fafc; padding: 8px; border: 1px solid #cbd5e1; border-radius: 10px; }
+        .label { font-size: 0.65rem; text-transform: uppercase; color: #64748b; text-align: center; margin-bottom: 5px; letter-spacing: 0.05em; }
+        
+        /* Größere Klickflächen für Daumenbedienung */
+        .slot { background: white; border: 2px solid #e2e8f0; border-radius: 8px; padding: 12px; margin-bottom: 5px; text-align: center; font-size: 0.75rem; min-height: 40px; display: flex; align-items: center; justify-content: center; cursor: pointer; color: #94a3b8; word-break: break-word; }
+        .slot.active { border-color: #3b82f6; background: #f0f7ff; color: #3b82f6; box-shadow: 0 0 0 2px rgba(59,130,246,0.2); }
+        .slot.filled { color: #1e293b; border-color: #475569; border-style: solid; font-weight: 600; }
+
+        .grid { padding: 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 6px; max-height: 220px; overflow-y: auto; background: #f1f5f9; }
+        .acc-btn { background: white; border: 1px solid #cbd5e1; padding: 12px 8px; border-radius: 8px; font-size: 0.7rem; cursor: pointer; text-align: left; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+        .acc-btn:active { background: #3b82f6; color: white; }
+
+        .footer { padding: 15px; text-align: center; }
+        #feedback { padding: 12px; border-radius: 10px; margin-bottom: 12px; font-weight: bold; display: none; font-size: 0.9rem; }
+        .ok { background: #dcfce7; color: #166534; border: 1px solid #22c55e; }
+        .err { background: #fee2e2; color: #991b1b; border: 1px solid #ef4444; }
+        
+        .btn { width: 100%; padding: 16px; border-radius: 12px; border: none; font-weight: bold; cursor: pointer; font-size: 1rem; margin-bottom: 8px; transition: background 0.2s; }
+        .btn-blue { background: #2563eb; color: white; }
+        .btn-green { background: #166534; color: white; }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+
+<div class="app">
+    <div class="header" id="info">Aufgabe 1 / 50</div>
+    <div class="task-area" id="task">Lade...</div>
+    
+    <div class="booking-ui">
+        <div class="side">
+            <div class="label">Soll</div>
+            <div id="s1" class="slot active" onclick="setSlot('s1')">Wählen...</div>
+            <div id="s2" class="slot" onclick="setSlot('s2')">(optional)</div>
+        </div>
+        <div class="side">
+            <div class="label">Haben</div>
+            <div id="h1" class="slot" onclick="setSlot('h1')">Wählen...</div>
+            <div id="h2" class="slot" onclick="setSlot('h2')">(optional)</div>
+        </div>
+    </div>
+
+    <div class="grid" id="grid"></div>
+
+    <div class="footer">
+        <div id="feedback"></div>
+        <button id="checkBtn" class="btn btn-blue" onclick="check()">Prüfen</button>
+        <button id="nextBtn" class="btn btn-green hidden" onclick="next()">Weiter →</button>
+        <div style="font-size:0.7rem; color:#64748b; margin-top:10px; text-decoration: underline;" onclick="location.reload()">Neu mischen</div>
+    </div>
+</div>
+
+<script>
+    // Kontenliste
+    const accounts = ["Abschreibungen auf Sachanlagen", "Aufwendungen für Waren", "Bank", "Betriebliche Steuern", "Betriebs- und Geschäftsausstattung", "Büromaterial", "Energie", "Forderungen aus L.L.", "Fuhrpark", "Gehälter", "Instandhaltung", "Kasse", "Löhne", "Mieten, Pachten", "Postgebühren/Telefon", "Sonstige betriebliche Erträge", "Umsatzerlöse für Waren", "Umsatzsteuer", "Verbindlichkeiten L.L.", "Verbindlichkeiten Bank", "Vorsteuer", "Warenbestand", "Werbung", "Zinsaufwendungen", "Zinserträge"];
+
+    // Aufgaben
+    let tasks = [
+        {t:"Zieleinkauf Waren, 1000€ netto + 19% USt", s:["Aufwendungen für Waren","Vorsteuer"], h:["Verbindlichkeiten L.L."]},
+        {t:"Barverkauf Waren, 595€ brutto", s:["Kasse"], h:["Umsatzerlöse für Waren","Umsatzsteuer"]},
+        {t:"Einkauf Büromaterial bar, 50€ netto + USt", s:["Büromaterial","Vorsteuer"], h:["Kasse"]},
+        {t:"Verkauf Waren auf Ziel, 2000€ netto + USt", s:["Forderungen aus L.L."], h:["Umsatzerlöse für Waren","Umsatzsteuer"]},
+        {t:"Zieleinkauf Lieferwagen, 30000€ netto + USt", s:["Fuhrpark","Vorsteuer"], h:["Verbindlichkeiten L.L."]},
+        {t:"Telefonrechnung per Bank, 100€ netto + USt", s:["Postgebühren/Telefon","Vorsteuer"], h:["Bank"]},
+        {t:"Barzahlung Zeitungsanzeige, 200€ netto + USt", s:["Werbung","Vorsteuer"], h:["Kasse"]},
+        {t:"Kauf Regale (BGA) per Bank, 1000€ netto + USt", s:["Betriebs- und Geschäftsausstattung","Vorsteuer"], h:["Bank"]},
+        {t:"Kunde zahlt Rechnung per Bank, 1190€", s:["Bank"], h:["Forderungen aus L.L."]},
+        {t:"Zahlung an Lieferant per Bank, 2380€", s:["Verbindlichkeiten L.L."], h:["Bank"]},
+        {t:"Tagesumsatz Kasse, 1000€ netto + 190€ USt", s:["Kasse"], h:["Umsatzerlöse für Waren","Umsatzsteuer"]},
+        {t:"Wareneinkauf per Bank, 800€ netto + USt", s:["Aufwendungen für Waren","Vorsteuer"], h:["Bank"]},
+        {t:"Miete Lager per Bank, 1000€ netto + USt", s:["Mieten, Pachten","Vorsteuer"], h:["Bank"]},
+        {t:"Reparatur Lieferwagen bar, 300€ netto + USt", s:["Instandhaltung","Vorsteuer"], h:["Kasse"]},
+        {t:"Verkauf altes Regal bar, 100€ netto + USt", s:["Kasse"], h:["Sonstige betriebliche Erträge","Umsatzsteuer"]},
+        {t:"Kauf Heizöl auf Ziel, 800€ netto + USt", s:["Energie","Vorsteuer"], h:["Verbindlichkeiten L.L."]},
+        {t:"Postgebühren bar (steuerfrei), 10€", s:["Postgebühren/Telefon"], h:["Kasse"]},
+        {t:"Lohnzahlung per Bank, 3000€", s:["Löhne"], h:["Bank"]},
+        {t:"Zinsertrag auf Bankkonto, 20€", s:["Bank"], h:["Zinserträge"]},
+        {t:"Überweisung Kfz-Steuer, 150€", s:["Betriebliche Steuern"], h:["Bank"]},
+        {t:"Kunde sendet Waren zurück (Gutschrift netto+USt)", s:["Umsatzerlöse für Waren","Umsatzsteuer"], h:["Forderungen aus L.L."]},
+        {t:"Rücksendung an Lieferer (Gutschrift netto+USt)", s:["Verbindlichkeiten L.L."], h:["Aufwendungen für Waren","Vorsteuer"]},
+        {t:"Überweisung an Finanzamt (USt-Zahllast)", s:["Umsatzsteuer"], h:["Bank"]},
+        {t:"Zieleinkauf Waren, 5000€ netto + USt", s:["Aufwendungen für Waren","Vorsteuer"], h:["Verbindlichkeiten L.L."]},
+        {t:"Barabhebung vom Bankkonto, 200€", s:["Kasse"], h:["Bank"]},
+        {t:"Stromrechnung per Bank, 150€ netto + USt", s:["Energie","Vorsteuer"], h:["Bank"]},
+        {t:"Schaufensterpuppen (BGA) bar, 400€ netto + USt", s:["Betriebs- und Geschäftsausstattung","Vorsteuer"], h:["Kasse"]},
+        {t:"Überweisung Gehälter, 4500€", s:["Gehälter"], h:["Bank"]},
+        {t:"Bezugskosten für Waren bar, 50€ netto + USt", s:["Aufwendungen für Waren","Vorsteuer"], h:["Kasse"]},
+        {t:"Zinsen für Darlehen per Bank, 400€", s:["Zinsaufwendungen"], h:["Bank"]},
+        {t:"Abschreibung Fuhrpark (Jahresende)", s:["Abschreibungen auf Sachanlagen"], h:["Fuhrpark"]},
+        {t:"Verkauf Waren auf Ziel, 10000€ netto + USt", s:["Forderungen aus L.L."], h:["Umsatzerlöse für Waren","Umsatzsteuer"]},
+        {t:"Barzahlung Reinigungsmittel, 20€ netto + USt", s:["Büromaterial","Vorsteuer"], h:["Kasse"]},
+        {t:"Auszahlung Darlehen (Bankgutschrift), 5000€", s:["Bank"], h:["Verbindlichkeiten Bank"]},
+        {t:"Kunde zahlt bar, 119€", s:["Kasse"], h:["Forderungen aus L.L."]},
+        {t:"Fachliteratur bar, 30€ netto + 7% USt", s:["Büromaterial","Vorsteuer"], h:["Kasse"]},
+        {t:"Wartung Kasse per Bank, 100€ netto + USt", s:["Instandhaltung","Vorsteuer"], h:["Bank"]},
+        {t:"Provision bar erhalten, 50€ netto + USt", s:["Kasse"], h:["Sonstige betriebliche Erträge","Umsatzsteuer"]},
+        {t:"Laptops (BGA) auf Ziel, 800€ netto + USt", s:["Betriebs- und Geschäftsausstattung","Vorsteuer"], h:["Verbindlichkeiten L.L."]},
+        {t:"Tanken Lieferwagen bar, 60€ netto + USt", s:["Energie","Vorsteuer"], h:["Kasse"]},
+        {t:"Spende per Bank (steuerfrei), 100€", s:["Sonstige betriebliche Erträge"], h:["Bank"]},
+        {t:"Grundsteuer per Bank, 200€", s:["Betriebliche Steuern"], h:["Bank"]},
+        {t:"Altpapierverkauf bar, 20€ netto + USt", s:["Kasse"], h:["Sonstige betriebliche Erträge","Umsatzsteuer"]},
+        {t:"Bankgebühren (steuerfrei), 15€", s:["Zinsaufwendungen"], h:["Bank"]},
+        {t:"Mängelrabatt von Lieferer (Bank)", s:["Bank"], h:["Aufwendungen für Waren","Vorsteuer"]},
+        {t:"Kunde sendet Ware zurück (Bar)", s:["Umsatzerlöse für Waren","Umsatzsteuer"], h:["Kasse"]},
+        {t:"Werbeagentur per Bank, 500€ netto + USt", s:["Werbung","Vorsteuer"], h:["Bank"]},
+        {t:"Tilgung Darlehen per Bank, 1000€", s:["Verbindlichkeiten Bank"], h:["Bank"]},
+        {t:"Abschreibung auf BGA", s:["Abschreibungen auf Sachanlagen"], h:["Betriebs- und Geschäftsausstattung"]},
+        {t:"Tagesumsatz bar, 2000€ netto + 380€ USt", s:["Kasse"], h:["Umsatzerlöse für Waren","Umsatzsteuer"]}
+    ];
+
+    let current = 0, active = "s1", sel = {s1:"",s2:"",h1:"",h2:""};
+
+    function init() {
+        const g = document.getElementById('grid');
+        accounts.sort().forEach(a => {
+            const b = document.createElement('button');
+            b.className = 'acc-btn'; b.innerText = a;
+            b.onclick = () => {
+                sel[active] = a; document.getElementById(active).innerText = a;
+                document.getElementById(active).classList.add('filled');
+                // Auto-Weiter-Logik für Smartphone
+                if(active==="s1") setSlot("s2"); 
+                else if(active==="s2") setSlot("h1"); 
+                else if(active==="h1") setSlot("h2");
+            };
+            g.appendChild(b);
+        });
+        tasks.sort(() => Math.random() - 0.5); 
+        load();
+    }
+
+    function setSlot(id) {
+        active = id; document.querySelectorAll('.slot').forEach(s => s.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+    }
+
+    function load() {
+        document.getElementById('task').innerText = tasks[current].t;
+        document.getElementById('info').innerText = "Aufgabe " + (current+1) + " / 50";
+        reset();
+    }
+
+    function reset() {
+        sel = {s1:"",s2:"",h1:"",h2:""};
+        ["s1","s2","h1","h2"].forEach(id => {
+            document.getElementById(id).innerText = id.includes("2") ? "(optional)" : "Wählen...";
+            document.getElementById(id).classList.remove('filled');
+        });
+        document.getElementById('feedback').style.display = "none";
+        document.getElementById('checkBtn').classList.remove('hidden');
+        document.getElementById('nextBtn').classList.add('hidden');
+        setSlot("s1");
+    }
+
+    function check() {
+        const t = tasks[current];
+        const uS = [sel.s1, sel.s2].filter(x => x && x !== "(optional)");
+        const uH = [sel.h1, sel.h2].filter(x => x && x !== "(optional)");
+        const ok = (a1, a2) => a1.length === a2.length && a1.every(x => a2.includes(x));
+        const f = document.getElementById('feedback');
+        f.style.display = "block";
+        if(ok(uS, t.s) && ok(uH, t.h)) {
+            f.innerText = "RICHTIG!"; f.className = "ok";
+            document.getElementById('checkBtn').classList.add('hidden');
+            document.getElementById('nextBtn').classList.remove('hidden');
+        } else {
+            f.innerText = "LEIDER FALSCH."; f.className = "err";
+        }
+    }
+
+    function next() { current = (current + 1) % 50; load(); }
+
+    init();
+</script>
+</body>
+</html>
