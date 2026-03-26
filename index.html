@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Fibu-Trainer XXL</title>
+    <title>Fibu-Trainer BFS 2 XXL</title>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
     <style>
         body { font-family: -apple-system, sans-serif; background: #f0f2f5; padding: 10px; display: flex; justify-content: center; margin: 0; }
@@ -13,9 +13,11 @@
         .progress-bar { height: 100%; background: #34c759; width: 0%; transition: width 0.3s; }
         #menu, #game, #results { display: none; }
         #menu { display: block; text-align: center; }
-        .menu-btn { background: #007aff; color: white; padding: 18px; margin: 8px 0; border-radius: 12px; cursor: pointer; width: 100%; font-size: 1.1rem; font-weight: bold; border: none; transition: 0.2; }
+        .menu-btn { background: #007aff; color: white; padding: 18px; margin: 8px 0; border-radius: 12px; cursor: pointer; width: 100%; font-size: 1.1rem; font-weight: bold; border: none; transition: 0.2s; position: relative; }
         .menu-btn.med { background: #5856d6; }
         .menu-btn.pro { background: #af52de; }
+        .menu-btn:disabled { background: #ccc !important; cursor: not-allowed; opacity: 0.6; }
+        .lock-info { font-size: 0.7rem; display: block; margin-top: 4px; font-weight: normal; color: #65676b; }
         .desc { font-size: 0.8rem; color: #65676b; margin-bottom: 10px; display: block; line-height: 1.2; }
         .task { font-weight: bold; font-size: 1.05rem; margin-bottom: 20px; min-height: 110px; text-align: center; background: #f8f9fa; padding: 15px; border-radius: 12px; display: flex; align-items: center; justify-content: center; border-top: 4px solid #007aff; line-height: 1.4; color: #1c1e21; box-sizing: border-box; }
         .entry-container { display: flex; gap: 10px; margin-bottom: 15px; }
@@ -30,21 +32,38 @@
         .correct { background: #e7f3ff; color: #1877f2; border: 1px solid #1877f2; }
         .wrong { background: #ffebe9; color: #f02849; border: 1px solid #f02849; }
         .stat-box { background: #f8f9fa; padding: 15px; border-radius: 12px; margin: 10px 0; text-align: center; }
-        .high-score { color: #34c759; font-weight: bold; }
     </style>
 </head>
-<body>
+<body onload="checkLevelLocks()">
 <div class="card">
     <div class="progress-container"><div class="progress-bar" id="progressBar"></div></div>
+    
     <div id="menu">
-        <h1>Fibu-Trainer</h1>
-        <button class="menu-btn" onclick="startGame('light')">1. Einsteiger</button>
-        <span class="desc">Nur Bestandsbuchungen. 50+ Aufgaben.</span>
-        <button class="menu-btn med" onclick="startGame('medium')">2. Fortgeschritten</button>
-        <span class="desc">Erfolgskonten ohne Steuer. 60+ Aufgaben.</span>
-        <button class="menu-btn pro" onclick="startGame('pro')">3. Profi</button>
-        <span class="desc">Splits mit Vor- & Umsatzsteuer. 60+ Aufgaben.</span>
+        <h1>Fibu-Trainer BFS 2</h1>
+        
+        <button class="menu-btn" onclick="startGame('light')">
+            1. Einsteiger 🔓
+            <span class="lock-info" id="info-light">Gelöst: 0</span>
+        </button>
+        <span class="desc">Nur Bestandskonten (Aktiv/Passiv).</span>
+
+        <button class="menu-btn med" id="btn-medium" onclick="startGame('medium')" disabled>
+            2. Fortgeschritten 🔒
+            <span class="lock-info" id="info-medium">Sperre: 30 Einsteiger-Fragen lösen</span>
+        </button>
+        <span class="desc">Erfolgskonten ohne Steuer.</span>
+
+        <button class="menu-btn pro" id="btn-pro" onclick="startGame('pro')" disabled>
+            3. Profi 🔒
+            <span class="lock-info" id="info-pro">Sperre: 20 Mittel-Fragen lösen</span>
+        </button>
+        <span class="desc">Erfolgskonten mit MwSt.</span>
+        
+        <div class="stat-box" style="font-size: 0.8rem; margin-top: 20px;">
+            <button style="background:none; border:none; color:#ccc; font-size:0.7rem; cursor:pointer;" onclick="resetAllProgress()">Fortschritt zurücksetzen</button>
+        </div>
     </div>
+
     <div id="game">
         <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: #65676b; margin-bottom: 5px;">
             <span id="levelDisplay">Level</span>
@@ -59,230 +78,187 @@
         <button class="action btn-next" id="nextBtn" onclick="generateTask()">Weiter</button>
         <div id="feedback" class="feedback"></div>
     </div>
+
     <div id="results">
         <h1 id="resTitle">Runde beendet!</h1>
         <div class="stat-box">
-            <p style="font-size: 1.2rem;">Ihr Ergebnis: <span id="currentScore" style="font-weight:bold;">0</span> von 10</p>
-            <p id="comparisonText" style="font-style:italic; color:#65676b;"></p>
+            <p style="font-size: 1.2rem;">In dieser Runde: <span id="currentScore" style="font-weight:bold;">0</span> von 10</p>
+            <p id="comparisonText" style="font-style:italic; color:#65676b; margin-top:10px;"></p>
         </div>
-        <div class="stat-box" style="font-size: 0.9rem;">
-            <p>Übungseinheiten gesamt: <span id="totalRounds" style="font-weight:bold;">0</span></p>
-            <p>Ihr Rekord Level <span id="recMode"></span>: <span class="high-score" id="bestScore">0</span>/10</p>
-        </div>
-        <button class="menu-btn" onclick="location.reload()">Neustart</button>
+        <button class="menu-btn" onclick="backToMenu()">Zurück zum Hauptmenü</button>
     </div>
 </div>
 
 <script>
-    const kontenListe = ["-- bitte wählen --", "Aufwendungen für Energie", "Aufwendungen für Waren (Wareneinkauf)", "Bank", "BGA", "Büromaterial", "Darlehen", "Eigenkapital", "Forderungen a. L. L.", "Fremdinstandsetzung", "Fuhrpark", "Kasse", "Mietaufwendungen", "Mieterträge", "Postgebühren", "Provisionsaufwendungen", "Provisionserträge", "Umsatzerlöse für Waren", "Umsatzsteuer", "Verbindlichkeiten a. L. L.", "Vorsteuer", "Waren (Vorrat)", "Werbung", "Zinsaufwendungen", "Zinserträge", "- kein zweites Konto -"];
+    const kontenListe = ["-- bitte wählen --", "Aufwendungen für Energie", "Aufwendungen für Waren (Wareneinkauf)", "Bank", "BGA", "Darlehen", "Eigenkapital", "Forderungen a. L. L.", "Fremdinstandsetzung", "Fuhrpark", "Kasse", "Mietaufwendungen", "Mieterträge", "Postgebühren", "Provisionsaufwendungen", "Provisionserträge", "Umsatzerlöse für Waren", "Umsatzsteuer", "Verbindlichkeiten a. L. L.", "Vorsteuer", "Waren (Vorrat)", "Werbung", "Zinsaufwendungen", "Zinserträge", "- kein zweites Konto -"];
     
-    // LEVEL 1: STRIKT NUR BESTANDSKONTEN
+    // --- POOL LIGHT (60 AUFGABEN) ---
     const poolLight = [
-        { c: "geld", t: "Wir heben Bargeld vom Bankkonto für die Ladenkasse ab.", s1: "Kasse", s2: "- kein zweites Konto -", h1: "Bank", h2: "- kein zweites Konto -" },
-        { c: "bga", t: "Kauf von Büromöbeln auf Ziel.", s1: "BGA", s2: "- kein zweites Konto -", h1: "Verbindlichkeiten a. L. L.", h2: "- kein zweites Konto -" },
+        { c: "geld", t: "Barabhebung vom Bankkonto für die Ladenkasse.", s1: "Kasse", s2: "- kein zweites Konto -", h1: "Bank", h2: "- kein zweites Konto -" },
+        { c: "geld", t: "Einzahlung von Bargeld aus der Kasse auf das Bankkonto.", s1: "Bank", s2: "- kein zweites Konto -", h1: "Kasse", h2: "- kein zweites Konto -" },
         { c: "geld", t: "Ein Kunde begleicht eine offene Rechnung per Banküberweisung.", s1: "Bank", s2: "- kein zweites Konto -", h1: "Forderungen a. L. L.", h2: "- kein zweites Konto -" },
         { c: "geld", t: "Wir begleichen eine Lieferantenrechnung per Banküberweisung.", s1: "Verbindlichkeiten a. L. L.", s2: "- kein zweites Konto -", h1: "Bank", h2: "- kein zweites Konto -" },
-        { c: "fuhrpark", t: "Anschaffung eines neuen Lieferwagens gegen Banküberweisung.", s1: "Fuhrpark", s2: "- kein zweites Konto -", h1: "Bank", h2: "- kein zweites Konto -" },
-        { c: "bga", t: "Wir kaufen einen neuen Bürostuhl gegen Barzahlung.", s1: "BGA", s2: "- kein zweites Konto -", h1: "Kasse", h2: "- kein zweites Konto -" },
-        { c: "darlehen", t: "Aufnahme eines langfristigen Bankdarlehens, Gutschrift auf dem Konto.", s1: "Bank", s2: "- kein zweites Konto -", h1: "Darlehen", h2: "- kein zweites Konto -" },
-        { c: "geld", t: "Einzahlung von Bargeld aus der Kasse auf das Bankkonto.", s1: "Bank", s2: "- kein zweites Konto -", h1: "Kasse", h2: "- kein zweites Konto -" },
-        { c: "vorrat", t: "Kauf von Handelswaren auf Ziel (Bestandserhöhung im Lager).", s1: "Waren (Vorrat)", s2: "- kein zweites Konto -", h1: "Verbindlichkeiten a. L. L.", h2: "- kein zweites Konto -" },
-        { c: "geld", t: "Ein Kunde zahlt seine Rechnung durch Übergabe eines Schecks.", s1: "Bank", s2: "- kein zweites Konto -", h1: "Forderungen a. L. L.", h2: "- kein zweites Konto -" },
-        { c: "bga", t: "Wir kaufen neue Ladenregale gegen Barzahlung.", s1: "BGA", s2: "- kein zweites Konto -", h1: "Kasse", h2: "- kein zweites Konto -" },
-        { c: "fuhrpark", t: "Kauf eines gebrauchten Gabelstaplers auf Ziel.", s1: "Fuhrpark", s2: "- kein zweites Konto -", h1: "Verbindlichkeiten a. L. L.", h2: "- kein zweites Konto -" },
-        { c: "buero", t: "Kauf von Aktenordnern (Vorrat Büromaterial) gegen Barzahlung.", s1: "Büromaterial", s2: "- kein zweites Konto -", h1: "Kasse", h2: "- kein zweites Konto -" },
-        { c: "darlehen", t: "Tilgung einer Darlehensrate durch Banküberweisung.", s1: "Darlehen", s2: "- kein zweites Konto -", h1: "Bank", h2: "- kein zweites Konto -" },
-        { c: "fuhrpark", t: "Wir kaufen einen Anhänger für den Fuhrpark gegen Barzahlung.", s1: "Fuhrpark", s2: "- kein zweites Konto -", h1: "Kasse", h2: "- kein zweites Konto -" },
-        { c: "bga", t: "Anschaffung von IT-Hardware (Server) auf Ziel.", s1: "BGA", s2: "- kein zweites Konto -", h1: "Verbindlichkeiten a. L. L.", h2: "- kein zweites Konto -" },
-        { c: "vorrat", t: "Warenkauf gegen Barzahlung (Lagererhöhung).", s1: "Waren (Vorrat)", s2: "- kein zweites Konto -", h1: "Kasse", h2: "- kein zweites Konto -" },
-        { c: "geld", t: "Wir zahlen eine fällige Lieferantenrechnung bar aus der Kasse.", s1: "Verbindlichkeiten a. L. L.", s2: "- kein zweites Konto -", h1: "Kasse", h2: "- kein zweites Konto -" },
-        { c: "bga", t: "Kauf einer Ladenwaage gegen Barzahlung.", s1: "BGA", s2: "- kein zweites Konto -", h1: "Kasse", h2: "- kein zweites Konto -" },
-        { c: "fuhrpark", t: "Kauf eines Elektro-Rollers für Lieferungen auf Ziel.", s1: "Fuhrpark", s2: "- kein zweites Konto -", h1: "Verbindlichkeiten a. L. L.", h2: "- kein zweites Konto -" },
-        { c: "darlehen", t: "Wir tilgen einen Teil des Darlehens durch Barzahlung.", s1: "Darlehen", s2: "- kein zweites Konto -", h1: "Kasse", h2: "- kein zweites Konto -" },
-        { c: "buero", t: "Wir kaufen einen Vorrat an Kopierpapier bar.", s1: "Büromaterial", s2: "- kein zweites Konto -", h1: "Kasse", h2: "- kein zweites Konto -" },
-        { c: "bga", t: "Kauf von Schaufensterpuppen auf Ziel.", s1: "BGA", s2: "- kein zweites Konto -", h1: "Verbindlichkeiten a. L. L.", h2: "- kein zweites Konto -" },
-        { c: "geld", t: "Umwandlung einer kurzfristigen Verbindlichkeit in ein langfristiges Darlehen.", s1: "Verbindlichkeiten a. L. L.", s2: "- kein zweites Konto -", h1: "Darlehen", h2: "- kein zweites Konto -" },
-        { c: "geld", t: "Ein Scheck wird auf dem Bankkonto gutgeschrieben.", s1: "Bank", s2: "- kein zweites Konto -", h1: "Bank", h2: "- kein zweites Konto -" },
-        { c: "fuhrpark", t: "Verkauf eines alten Firmenwagens zum Buchwert gegen Barzahlung.", s1: "Kasse", s2: "- kein zweites Konto -", h1: "Fuhrpark", h2: "- kein zweites Konto -" },
-        { c: "bga", t: "Wir verkaufen ein altes Regal zum Buchwert gegen Barzahlung.", s1: "Kasse", s2: "- kein zweites Konto -", h1: "BGA", h2: "- kein zweites Konto -" },
-        { c: "vorrat", t: "Rücksendung von Waren an den Lieferanten (Gutschrift auf Ziel).", s1: "Verbindlichkeiten a. L. L.", s2: "- kein zweites Konto -", h1: "Waren (Vorrat)", h2: "- kein zweites Konto -" },
-        { c: "geld", t: "Wir leisten eine Anzahlung für eine Maschine per Bank.", s1: "BGA", s2: "- kein zweites Konto -", h1: "Bank", h2: "- kein zweites Konto -" },
-        { c: "fuhrpark", t: "Ein defekter Anhänger wird bar verkauft (zum Buchwert).", s1: "Kasse", s2: "- kein zweites Konto -", h1: "Fuhrpark", h2: "- kein zweites Konto -" },
-        { c: "geld", t: "Barabhebung für die Portokasse vom Bankkonto.", s1: "Kasse", s2: "- kein zweites Konto -", h1: "Bank", h2: "- kein zweites Konto -" },
-        { c: "bga", t: "Kauf eines Tresors für das Büro auf Ziel.", s1: "BGA", s2: "- kein zweites Konto -", h1: "Verbindlichkeiten a. L. L.", h2: "- kein zweites Konto -" },
-        { c: "geld", t: "Wir überweisen Geld vom Postbankkonto auf das Sparkonto (beides Bank).", s1: "Bank", s2: "- kein zweites Konto -", h1: "Bank", h2: "- kein zweites Konto -" },
-        { c: "fuhrpark", t: "Anschaffung eines Fahrrads für den Botendienst gegen Barzahlung.", s1: "Fuhrpark", s2: "- kein zweites Konto -", h1: "Kasse", h2: "- kein zweites Konto -" },
-        { c: "vorrat", t: "Warenbezug beim Großhändler gegen sofortige Barzahlung.", s1: "Waren (Vorrat)", s2: "- kein zweites Konto -", h1: "Kasse", h2: "- kein zweites Konto -" },
-        { c: "bga", t: "Kauf eines gebrauchten Laptops bar.", s1: "BGA", s2: "- kein zweites Konto -", h1: "Kasse", h2: "- kein zweites Konto -" },
-        { c: "geld", t: "Einzahlung von privaten Mitteln auf das Bankkonto (Kapitalerhöhung).", s1: "Bank", s2: "- kein zweites Konto -", h1: "Eigenkapital", h2: "- kein zweites Konto -" },
-        { c: "darlehen", t: "Wir nehmen einen Kredit auf und lassen ihn auf das Konto auszahlen.", s1: "Bank", s2: "- kein zweites Konto -", h1: "Darlehen", h2: "- kein zweites Konto -" },
-        { c: "bga", t: "Ein defekter Kopierer wird gegen Barzahlung abgegeben (Buchwert).", s1: "Kasse", s2: "- kein zweites Konto -", h1: "BGA", h2: "- kein zweites Konto -" },
-        { c: "buero", t: "Wir kaufen Briefumschläge auf Vorrat bar.", s1: "Büromaterial", s2: "- kein zweites Konto -", h1: "Kasse", h2: "- kein zweites Konto -" },
-        { c: "geld", t: "Kunde zahlt eine fällige Rechnung in bar.", s1: "Kasse", s2: "- kein zweites Konto -", h1: "Forderungen a. L. L.", h2: "- kein zweites Konto -" },
-        { c: "fuhrpark", t: "Kauf eines LKWs auf Ziel.", s1: "Fuhrpark", s2: "- kein zweites Konto -", h1: "Verbindlichkeiten a. L. L.", h2: "- kein zweites Konto -" },
-        { c: "geld", t: "Wir gleichen eine Verbindlichkeit durch Banküberweisung aus.", s1: "Verbindlichkeiten a. L. L.", s2: "- kein zweites Konto -", h1: "Bank", h2: "- kein zweites Konto -" },
-        { c: "vorrat", t: "Erhöhung des Warenbestands durch Einkauf auf Ziel.", s1: "Waren (Vorrat)", s2: "- kein zweites Konto -", h1: "Verbindlichkeiten a. L. L.", h2: "- kein zweites Konto -" },
-        { c: "bga", t: "Anschaffung einer Kaffeemaschine für den Pausenraum bar.", s1: "BGA", s2: "- kein zweites Konto -", h1: "Kasse", h2: "- kein zweites Konto -" },
-        { c: "darlehen", t: "Rückzahlung einer Darlehensschuld per Bank.", s1: "Darlehen", s2: "- kein zweites Konto -", h1: "Bank", h2: "- kein zweites Konto -" },
-        { c: "buero", t: "Kauf von Tonerkartuschen (Büromaterial-Bestand) auf Ziel.", s1: "Büromaterial", s2: "- kein zweites Konto -", h1: "Verbindlichkeiten a. L. L.", h2: "- kein zweites Konto -" },
-        { c: "geld", t: "Wir heben Geld vom Bankkonto ab, um Lieferanten bar zu bezahlen.", s1: "Kasse", s2: "- kein zweites Konto -", h1: "Bank", h2: "- kein zweites Konto -" },
-        { c: "bga", t: "Kauf von neuen Büroschränken auf Ziel.", s1: "BGA", s2: "- kein zweites Konto -", h1: "Verbindlichkeiten a. L. L.", h2: "- kein zweites Konto -" },
-        { c: "geld", t: "Ein Scheck eines Kunden geht ein und wird bar eingelöst.", s1: "Kasse", s2: "- kein zweites Konto -", h1: "Forderungen a. L. L.", h2: "- kein zweites Konto -" },
-        { c: "fuhrpark", t: "Kauf eines Transportanhängers gegen Banküberweisung.", s1: "Fuhrpark", s2: "- kein zweites Konto -", h1: "Bank", h2: "- kein zweites Konto -" },
-        { c: "vorrat", t: "Wir kaufen Verpackungsmaterial (Bestand) bar.", s1: "Büromaterial", s2: "- kein zweites Konto -", h1: "Kasse", h2: "- kein zweites Konto -" },
-        { c: "bga", t: "Verkauf eines gebrauchten Schreibtischs (Buchwert) bar.", s1: "Kasse", s2: "- kein zweites Konto -", h1: "BGA", h2: "- kein zweites Konto -" },
-        { c: "darlehen", t: "Wir erhalten eine Darlehenszusage, das Geld wird der Bank gutgeschrieben.", s1: "Bank", s2: "- kein zweites Konto -", h1: "Darlehen", h2: "- kein zweites Konto -" },
-        { c: "geld", t: "Gutschrift einer Kundenforderung auf dem Bankkonto.", s1: "Bank", s2: "- kein zweites Konto -", h1: "Forderungen a. L. L.", h2: "- kein zweites Konto -" },
-        { c: "buero", t: "Anschaffung von Schreibutensilien bar für das Lager.", s1: "Büromaterial", s2: "- kein zweites Konto -", h1: "Kasse", h2: "- kein zweites Konto -" },
-        { c: "bga", t: "Kauf eines Aktenvernichters gegen Barzahlung.", s1: "BGA", s2: "- kein zweites Konto -", h1: "Kasse", h2: "- kein zweites Konto -" },
-        { c: "fuhrpark", t: "Ein alter LKW wird gegen Rechnung (auf Ziel) verkauft (Buchwert).", s1: "Forderungen a. L. L.", s2: "- kein zweites Konto -", h1: "Fuhrpark", h2: "- kein zweites Konto -" },
+        { c: "geld", t: "Kunde begleicht Rechnung durch Scheck (Gutschrift auf Bank).", s1: "Bank", s2: "- kein zweites Konto -", h1: "Forderungen a. L. L.", h2: "- kein zweites Konto -" },
+        { c: "geld", t: "Ein Kunde zahlt eine Rechnung bar in die Kasse ein.", s1: "Kasse", s2: "- kein zweites Konto -", h1: "Forderungen a. L. L.", h2: "- kein zweites Konto -" },
+        { c: "geld", t: "Wir begleichen eine Lieferantenrechnung bar aus der Kasse.", s1: "Verbindlichkeiten a. L. L.", s2: "- kein zweites Konto -", h1: "Kasse", h2: "- kein zweites Konto -" },
+        { c: "geld", t: "Bareinzahlung von Tageseinnahmen auf das Geschäftskonto.", s1: "Bank", s2: "- kein zweites Konto -", h1: "Kasse", h2: "- kein zweites Konto -" },
+        { c: "geld", t: "Wir heben 500 € vom Konto ab für die Portokasse.", s1: "Kasse", s2: "- kein zweites Konto -", h1: "Bank", h2: "- kein zweites Konto -" },
+        { c: "geld", t: "Einzahlung auf das Sparkonto der Bank vom Barbestand.", s1: "Bank", s2: "- kein zweites Konto -", h1: "Kasse", h2: "- kein zweites Konto -" },
+        { c: "geld", t: "Umbuchung vom Bankkonto auf das Kassenkonto.", s1: "Kasse", s2: "- kein zweites Konto -", h1: "Bank", h2: "- kein zweites Konto -" },
         { c: "geld", t: "Wir überweisen Geld von der Kasse zur Bank.", s1: "Bank", s2: "- kein zweites Konto -", h1: "Kasse", h2: "- kein zweites Konto -" },
+        { c: "geld", t: "Ein Scheck eines Kunden geht ein und wird bar eingelöst.", s1: "Kasse", s2: "- kein zweites Konto -", h1: "Forderungen a. L. L.", h2: "- kein zweites Konto -" },
+        { c: "geld", t: "Gutschrift einer Kundenforderung auf dem Bankkonto.", s1: "Bank", s2: "- kein zweites Konto -", h1: "Forderungen a. L. L.", h2: "- kein zweites Konto -" },
+        { c: "bga", t: "Kauf von Ladentisch und Regalen auf Ziel.", s1: "BGA", s2: "- kein zweites Konto -", h1: "Verbindlichkeiten a. L. L.", h2: "- kein zweites Konto -" },
+        { c: "bga", t: "Kauf von Büromöbeln auf Ziel.", s1: "BGA", s2: "- kein zweites Konto -", h1: "Verbindlichkeiten a. L. L.", h2: "- kein zweites Konto -" },
+        { c: "bga", t: "Wir kaufen einen neuen Büroschrank gegen Barzahlung.", s1: "BGA", s2: "- kein zweites Konto -", h1: "Kasse", h2: "- kein zweites Konto -" },
+        { c: "bga", t: "Wir kaufen neue Ladenregale gegen Barzahlung.", s1: "BGA", s2: "- kein zweites Konto -", h1: "Kasse", h2: "- kein zweites Konto -" },
+        { c: "bga", t: "Anschaffung von IT-Servern auf Ziel.", s1: "BGA", s2: "- kein zweites Konto -", h1: "Verbindlichkeiten a. L. L.", h2: "- kein zweites Konto -" },
+        { c: "bga", t: "Kauf einer Ladenwaage gegen Barzahlung.", s1: "BGA", s2: "- kein zweites Konto -", h1: "Kasse", h2: "- kein zweites Konto -" },
+        { c: "bga", t: "Ein Tresor wird auf Ziel gekauft.", s1: "BGA", s2: "- kein zweites Konto -", h1: "Verbindlichkeiten a. L. L.", h2: "- kein zweites Konto -" },
+        { c: "bga", t: "Kauf von Schaufensterpuppen auf Ziel.", s1: "BGA", s2: "- kein zweites Konto -", h1: "Verbindlichkeiten a. L. L.", h2: "- kein zweites Konto -" },
+        { c: "bga", t: "Wir kaufen einen Aktenvernichter gegen Rechnung.", s1: "BGA", s2: "- kein zweites Konto -", h1: "Verbindlichkeiten a. L. L.", h2: "- kein zweites Konto -" },
+        { c: "bga", t: "Anschaffung einer Kaffeemaschine bar.", s1: "BGA", s2: "- kein zweites Konto -", h1: "Kasse", h2: "- kein zweites Konto -" },
+        { c: "bga", t: "Kauf von neuen Büroschränken auf Ziel.", s1: "BGA", s2: "- kein zweites Konto -", h1: "Verbindlichkeiten a. L. L.", h2: "- kein zweites Konto -" },
+        { c: "bga", t: "Ein gebrauchter PC wird bar bezahlt.", s1: "BGA", s2: "- kein zweites Konto -", h1: "Kasse", h2: "- kein zweites Konto -" },
+        { c: "bga", t: "Kauf eines neuen Beamers auf Ziel.", s1: "BGA", s2: "- kein zweites Konto -", h1: "Verbindlichkeiten a. L. L.", h2: "- kein zweites Konto -" },
+        { c: "bga", t: "Wir kaufen Ladentheken auf Rechnung.", s1: "BGA", s2: "- kein zweites Konto -", h1: "Verbindlichkeiten a. L. L.", h2: "- kein zweites Konto -" },
+        { c: "bga", t: "Kauf einer Registrierkasse per Überweisung.", s1: "BGA", s2: "- kein zweites Konto -", h1: "Bank", h2: "- kein zweites Konto -" },
+        { c: "bga", t: "Anschaffung von Schaufenster-Vitrinen gegen Barzahlung.", s1: "BGA", s2: "- kein zweites Konto -", h1: "Kasse", h2: "- kein zweites Konto -" },
+        { c: "bga", t: "Kauf von Lagerregalen per Banküberweisung.", s1: "BGA", s2: "- kein zweites Konto -", h1: "Bank", h2: "- kein zweites Konto -" },
+        { c: "fuhrpark", t: "Anschaffung eines neuen Lieferwagens gegen Banküberweisung.", s1: "Fuhrpark", s2: "- kein zweites Konto -", h1: "Bank", h2: "- kein zweites Konto -" },
+        { c: "fuhrpark", t: "Kauf eines gebrauchten Gabelstaplers auf Ziel.", s1: "Fuhrpark", s2: "- kein zweites Konto -", h1: "Verbindlichkeiten a. L. L.", h2: "- kein zweites Konto -" },
+        { c: "fuhrpark", t: "Wir kaufen einen Anhänger für den Fuhrpark gegen Barzahlung.", s1: "Fuhrpark", s2: "- kein zweites Konto -", h1: "Kasse", h2: "- kein zweites Konto -" },
+        { c: "fuhrpark", t: "Kauf eines Elektro-Rollers für Lieferungen auf Ziel.", s1: "Fuhrpark", s2: "- kein zweites Konto -", h1: "Verbindlichkeiten a. L. L.", h2: "- kein zweites Konto -" },
+        { c: "fuhrpark", t: "Anschaffung eines Fahrrads für den Botendienst bar.", s1: "Fuhrpark", s2: "- kein zweites Konto -", h1: "Kasse", h2: "- kein zweites Konto -" },
+        { c: "fuhrpark", t: "Kauf eines LKWs auf Ziel.", s1: "Fuhrpark", s2: "- kein zweites Konto -", h1: "Verbindlichkeiten a. L. L.", h2: "- kein zweites Konto -" },
+        { c: "fuhrpark", t: "Wir kaufen einen Transportanhänger per Banküberweisung.", s1: "Fuhrpark", s2: "- kein zweites Konto -", h1: "Bank", h2: "- kein zweites Konto -" },
+        { c: "fuhrpark", t: "Kauf eines Hubwagens (Fuhrpark) bar.", s1: "Fuhrpark", s2: "- kein zweites Konto -", h1: "Kasse", h2: "- kein zweites Konto -" },
+        { c: "fuhrpark", t: "Ein gebrauchter Transporter wird bar bezahlt.", s1: "Fuhrpark", s2: "- kein zweites Konto -", h1: "Kasse", h2: "- kein zweites Konto -" },
+        { c: "fuhrpark", t: "Anschaffung eines E-Bikes für Express-Lieferungen auf Ziel.", s1: "Fuhrpark", s2: "- kein zweites Konto -", h1: "Verbindlichkeiten a. L. L.", h2: "- kein zweites Konto -" },
+        { c: "vorrat", t: "Kauf von Handelswaren auf Ziel (Lagerbestandserhöhung).", s1: "Waren (Vorrat)", s2: "- kein zweites Konto -", h1: "Verbindlichkeiten a. L. L.", h2: "- kein zweites Konto -" },
+        { c: "vorrat", t: "Warenkauf gegen Barzahlung (Erhöhung des Vorrats).", s1: "Waren (Vorrat)", s2: "- kein zweites Konto -", h1: "Kasse", h2: "- kein zweites Konto -" },
+        { c: "vorrat", t: "Warenbezug beim Großhändler gegen sofortige Barzahlung.", s1: "Waren (Vorrat)", s2: "- kein zweites Konto -", h1: "Kasse", h2: "- kein zweites Konto -" },
+        { c: "vorrat", t: "Erhöhung des Warenbestands durch Einkauf auf Ziel.", s1: "Waren (Vorrat)", s2: "- kein zweites Konto -", h1: "Verbindlichkeiten a. L. L.", h2: "- kein zweites Konto -" },
         { c: "vorrat", t: "Wir kaufen Waren für das Lager auf Ziel.", s1: "Waren (Vorrat)", s2: "- kein zweites Konto -", h1: "Verbindlichkeiten a. L. L.", h2: "- kein zweites Konto -" },
-        { c: "geld", t: "Barzahlung einer Verbindlichkeit gegenüber einem Lieferanten.", s1: "Verbindlichkeiten a. L. L.", s2: "- kein zweites Konto -", h1: "Kasse", h2: "- kein zweites Konto -" }
-    ];
-    // LEVEL 2: ERFOLGSKONTEN OHNE STEUER
-    const poolMedium = [
-        { c: "miete", t: "Wir bezahlen die monatliche Ladenmiete per Banküberweisung.", s1: "Mietaufwendungen", s2: "- kein zweites Konto -", h1: "Bank", h2: "- kein zweites Konto -" },
-        { c: "post", t: "Barkauf von Briefmarken für die Geschäftspost.", s1: "Postgebühren", s2: "- kein zweites Konto -", h1: "Kasse", h2: "- kein zweites Konto -" },
-        { c: "energie", t: "Die Stromrechnung für das Lager wird per Bank bezahlt.", s1: "Aufwendungen für Energie", s2: "- kein zweites Konto -", h1: "Bank", h2: "- kein zweites Konto -" },
-        { c: "zins", t: "Wir überweisen die fälligen Zinsen für ein Darlehen.", s1: "Zinsaufwendungen", s2: "- kein zweites Konto -", h1: "Bank", h2: "- kein zweites Konto -" },
-        { c: "werbung", t: "Barzahlung einer Werbeanzeige in der Lokalzeitung.", s1: "Werbung", s2: "- kein zweites Konto -", h1: "Kasse", h2: "- kein zweites Konto -" },
-        { c: "zins", t: "Die Bank schreibt uns Zinsen auf dem Geschäftskonto gut.", s1: "Bank", s2: "- kein zweites Konto -", h1: "Zinserträge", h2: "- kein zweites Konto -" },
-        { c: "verkauf", t: "Verkauf von Waren auf Ziel (ohne Berücksichtigung der Steuer).", s1: "Forderungen a. L. L.", s2: "- kein zweites Konto -", h1: "Umsatzerlöse für Waren", h2: "- kein zweites Konto -" },
-        { c: "instand", t: "Wir bezahlen die Reparatur der Registrierkasse bar.", s1: "Fremdinstandsetzung", s2: "- kein zweites Konto -", h1: "Kasse", h2: "- kein zweites Konto -" },
-        { c: "ertrag", t: "Ein Mieter überweist uns die Monatsmiete für Büroräume.", s1: "Bank", s2: "- kein zweites Konto -", h1: "Mieterträge", h2: "- kein zweites Konto -" },
-        { c: "buero", t: "Barkauf von Druckerpatronen und Toner (Büromaterial).", s1: "Büromaterial", s2: "- kein zweites Konto -", h1: "Kasse", h2: "- kein zweites Konto -" },
-        { c: "provis", t: "Provision für eine Warenvermittlung wird bar eingenommen.", s1: "Kasse", s2: "- kein zweites Konto -", h1: "Provisionserträge", h2: "- kein zweites Konto -" },
-        { c: "post", t: "Banküberweisung des Rundfunkbeitrags für den Laden.", s1: "Postgebühren", s2: "- kein zweites Konto -", h1: "Bank", h2: "- kein zweites Konto -" },
-        { c: "energie", t: "Die monatliche Gasrechnung wird per Bank bezahlt.", s1: "Aufwendungen für Energie", s2: "- kein zweites Konto -", h1: "Bank", h2: "- kein zweites Konto -" },
-        { c: "instand", t: "Wir bezahlen die Reinigung der Verkaufsräume bar.", s1: "Fremdinstandsetzung", s2: "- kein zweites Konto -", h1: "Kasse", h2: "- kein zweites Konto -" },
-        { c: "einkauf", t: "Wareneinkauf auf Ziel (aufwandsorientiert, ohne Steuer).", s1: "Aufwendungen für Waren (Wareneinkauf)", s2: "- kein zweites Konto -", h1: "Verbindlichkeiten a. L. L.", h2: "- kein zweites Konto -" },
-        { c: "provis", t: "Wir überweisen eine Vermittlungsprovision an einen Vertreter.", s1: "Provisionsaufwendungen", s2: "- kein zweites Konto -", h1: "Bank", h2: "- kein zweites Konto -" },
-        { c: "zins", t: "Kontoführungsgebühren werden vom Bankkonto abgebucht.", s1: "Zinsaufwendungen", s2: "- kein zweites Konto -", h1: "Bank", h2: "- kein zweites Konto -" },
-        { c: "werbung", t: "Druck von Werbe-Flyern wird bar bezahlt.", s1: "Werbung", s2: "- kein zweites Konto -", h1: "Kasse", h2: "- kein zweites Konto -" },
-        { c: "miete", t: "Wir überweisen die Prämie für die Gebäudeversicherung.", s1: "Mietaufwendungen", s2: "- kein zweites Konto -", h1: "Bank", h2: "- kein zweites Konto -" },
-        { c: "energie", t: "Barzahlung für die Entsorgung von Verpackungsmüll.", s1: "Aufwendungen für Energie", s2: "- kein zweites Konto -", h1: "Kasse", h2: "- kein zweites Konto -" },
-        { c: "post", t: "Zahlung für Telefon- und Internetgebühren per Bank.", s1: "Postgebühren", s2: "- kein zweites Konto -", h1: "Bank", h2: "- kein zweites Konto -" },
-        { c: "ertrag", t: "Wir erhalten Mieterträge für einen Parkplatz bar.", s1: "Kasse", s2: "- kein zweites Konto -", h1: "Mieterträge", h2: "- kein zweites Konto -" },
-        { c: "instand", t: "Reparatur der Schaufensterscheibe per Überweisung.", s1: "Fremdinstandsetzung", s2: "- kein zweites Konto -", h1: "Bank", h2: "- kein zweites Konto -" },
-        { c: "provis", t: "Gutschrift der Bank für erhaltene Provisionen.", s1: "Bank", s2: "- kein zweites Konto -", h1: "Provisionserträge", h2: "- kein zweites Konto -" },
-        { c: "werbung", t: "Wir bezahlen für Radiowerbung per Banküberweisung.", s1: "Werbung", s2: "- kein zweites Konto -", h1: "Bank", h2: "- kein zweites Konto -" },
-        { c: "post", t: "Gebühren für Paketzustellungen werden bar bezahlt.", s1: "Postgebühren", s2: "- kein zweites Konto -", h1: "Kasse", h2: "- kein zweites Konto -" },
-        { c: "buero", t: "Einkauf von Schreibpapier und Heftern (Büromaterial) bar.", s1: "Büromaterial", s2: "- kein zweites Konto -", h1: "Kasse", h2: "- kein zweites Konto -" },
-        { c: "zins", t: "Zinsgutschrift der Sparkasse für unser Guthaben.", s1: "Bank", s2: "- kein zweites Konto -", h1: "Zinserträge", h2: "- kein zweites Konto -" },
-        { c: "verkauf", t: "Wir verkaufen Handelswaren bar (ohne Steuer).", s1: "Kasse", s2: "- kein zweites Konto -", h1: "Umsatzerlöse für Waren", h2: "- kein zweites Konto -" },
-        { c: "miete", t: "Zahlung der monatlichen Grundsteuer (Mietaufwand) per Bank.", s1: "Mietaufwendungen", s2: "- kein zweites Konto -", h1: "Bank", h2: "- kein zweites Konto -" },
-        { c: "instand", t: "Wartung der Klimaanlage bar bezahlt.", s1: "Fremdinstandsetzung", s2: "- kein zweites Konto -", h1: "Kasse", h2: "- kein zweites Konto -" },
-        { c: "provis", t: "Wir zahlen eine Provision an einen Partner bar.", s1: "Provisionsaufwendungen", s2: "- kein zweites Konto -", h1: "Kasse", h2: "- kein zweites Konto -" },
-        { c: "post", t: "Überweisung der Kosten für die Postfachmiete.", s1: "Postgebühren", s2: "- kein zweites Konto -", h1: "Bank", h2: "- kein zweites Konto -" },
-        { c: "energie", t: "Stromkostenvorschuss per Banküberweisung.", s1: "Aufwendungen für Energie", s2: "- kein zweites Konto -", h1: "Bank", h2: "- kein zweites Konto -" },
-        { c: "ertrag", t: "Wir erhalten die Miete für eine Lagerfläche bar.", s1: "Kasse", s2: "- kein zweites Konto -", h1: "Mieterträge", h2: "- kein zweites Konto -" },
-        { c: "werbung", t: "Zahlung für Online-Anzeigen per Bank.", s1: "Werbung", s2: "- kein zweites Konto -", h1: "Bank", h2: "- kein zweites Konto -" },
-        { c: "buero", t: "Ordner und Register (Büromaterial) werden bar gekauft.", s1: "Büromaterial", s2: "- kein zweites Konto -", h1: "Kasse", h2: "- kein zweites Konto -" },
-        { c: "instand", t: "Reparatur am Lieferwagen per Bank bezahlt.", s1: "Fremdinstandsetzung", s2: "- kein zweites Konto -", h1: "Bank", h2: "- kein zweites Konto -" },
-        { c: "zins", t: "Zahlung von Überziehungszinsen per Bank.", s1: "Zinsaufwendungen", s2: "- kein zweites Konto -", h1: "Bank", h2: "- kein zweites Konto -" },
-        { c: "post", t: "Barzahlung für Nachsendeauftrag der Post.", s1: "Postgebühren", s2: "- kein zweites Konto -", h1: "Kasse", h2: "- kein zweites Konto -" },
-        { c: "verkauf", t: "Warenverkauf gegen Scheck (ohne Steuer).", s1: "Bank", s2: "- kein zweites Konto -", h1: "Umsatzerlöse für Waren", h2: "- kein zweites Konto -" },
-        { c: "miete", t: "Gebäudeversicherung für das Lager per Überweisung.", s1: "Mietaufwendungen", s2: "- kein zweites Konto -", h1: "Bank", h2: "- kein zweites Konto -" },
-        { c: "instand", t: "Fensterreinigung des Ladens bar bezahlt.", s1: "Fremdinstandsetzung", s2: "- kein zweites Konto -", h1: "Kasse", h2: "- kein zweites Konto -" },
-        { c: "energie", t: "Wir bezahlen die Heizkosten für das Büro per Bank.", s1: "Aufwendungen für Energie", s2: "- kein zweites Konto -", h1: "Bank", h2: "- kein zweites Konto -" },
-        { c: "buero", t: "Kauf von Versandtaschen (Büromaterial) auf Ziel.", s1: "Büromaterial", s2: "- kein zweites Konto -", h1: "Verbindlichkeiten a. L. L.", h2: "- kein zweites Konto -" },
-        { c: "ertrag", t: "Gutschrift für die Untervermietung eines Büros.", s1: "Bank", s2: "- kein zweites Konto -", h1: "Mieterträge", h2: "- kein zweites Konto -" },
-        { c: "werbung", t: "Sponsoringbeitrag für Sportverein (Werbung) bar.", s1: "Werbung", s2: "- kein zweites Konto -", h1: "Kasse", h2: "- kein zweites Konto -" },
-        { c: "provis", t: "Wir erhalten Provisionserträge per Banküberweisung.", s1: "Bank", s2: "- kein zweites Konto -", h1: "Provisionserträge", h2: "- kein zweites Konto -" },
-        { c: "post", t: "Grundgebühr für das Telefon per Bank überwiesen.", s1: "Postgebühren", s2: "- kein zweites Konto -", h1: "Bank", h2: "- kein zweites Konto -" },
-        { c: "miete", t: "Reinigungskosten für das Treppenhaus (Mietaufwand) bar.", s1: "Mietaufwendungen", s2: "- kein zweites Konto -", h1: "Kasse", h2: "- kein zweites Konto -" },
-        { c: "instand", t: "Wartung der Brandmeldeanlage per Bank.", s1: "Fremdinstandsetzung", s2: "- kein zweites Konto -", h1: "Bank", h2: "- kein zweites Konto -" },
-        { c: "zins", t: "Zinsen für Guthaben auf dem Sparkonto erhalten.", s1: "Bank", s2: "- kein zweites Konto -", h1: "Zinserträge", h2: "- kein zweites Konto -" },
-        { c: "einkauf", t: "Wareneinkauf bar (aufwandsorientiert ohne Steuer).", s1: "Aufwendungen für Waren (Wareneinkauf)", s2: "- kein zweites Konto -", h1: "Kasse", h2: "- kein zweites Konto -" },
-        { c: "provis", t: "Provision für einen Verkaufsabschluss bar bezahlt.", s1: "Provisionsaufwendungen", s2: "- kein zweites Konto -", h1: "Kasse", h2: "- kein zweites Konto -" },
-        { c: "werbung", t: "Wir bezahlen für Schaufensterdekoration bar.", s1: "Werbung", s2: "- kein zweites Konto -", h1: "Kasse", h2: "- kein zweites Konto -" },
-        { c: "post", t: "Kosten für Paketmarken per Bank überwiesen.", s1: "Postgebühren", s2: "- kein zweites Konto -", h1: "Bank", h2: "- kein zweites Konto -" },
-        { c: "energie", t: "Stromabrechnung (Nachzahlung) per Überweisung.", s1: "Aufwendungen für Energie", s2: "- kein zweites Konto -", h1: "Bank", h2: "- kein zweites Konto -" },
-        { c: "instand", t: "Reparatur am Hubwagen bar bezahlt.", s1: "Fremdinstandsetzung", s2: "- kein zweites Konto -", h1: "Kasse", h2: "- kein zweites Konto -" },
-        { c: "miete", t: "Grundbesitzabgaben für das Geschäftsgrundstück per Bank.", s1: "Mietaufwendungen", s2: "- kein zweites Konto -", h1: "Bank", h2: "- kein zweites Konto -" },
-        { c: "zins", t: "Bereitstellungszinsen für Kredit per Bank bezahlt.", s1: "Zinsaufwendungen", s2: "- kein zweites Konto -", h1: "Bank", h2: "- kein zweites Konto -" },
-        { c: "ertrag", t: "Wir erhalten eine Mietvorauszahlung bar.", s1: "Kasse", s2: "- kein zweites Konto -", h1: "Mieterträge", h2: "- kein zweites Konto -" }
+        { c: "vorrat", t: "Anschaffung von Vorrats-Waren per Banküberweisung.", s1: "Waren (Vorrat)", s2: "- kein zweites Konto -", h1: "Bank", h2: "- kein zweites Konto -" },
+        { c: "darlehen", t: "Aufnahme eines langfristigen Bankdarlehens, Gutschrift auf dem Konto.", s1: "Bank", s2: "- kein zweites Konto -", h1: "Darlehen", h2: "- kein zweites Konto -" },
+        { c: "darlehen", t: "Tilgung einer Darlehensrate durch Banküberweisung.", s1: "Darlehen", s2: "- kein zweites Konto -", h1: "Bank", h2: "- kein zweites Konto -" },
+        { c: "darlehen", t: "Wir tilgen einen Teil des Darlehens durch Barzahlung.", s1: "Darlehen", s2: "- kein zweites Konto -", h1: "Kasse", h2: "- kein zweites Konto -" },
+        { c: "darlehen", t: "Wir erhalten eine Darlehenszusage, das Geld wird der Bank gutgeschrieben.", s1: "Bank", s2: "- kein zweites Konto -", h1: "Darlehen", h2: "- kein zweites Konto -" },
+        { c: "darlehen", t: "Banküberweisung einer Tilgungsrate für das Darlehen.", s1: "Darlehen", s2: "- kein zweites Konto -", h1: "Bank", h2: "- kein zweites Konto -" },
+        { c: "darlehen", t: "Barzahlung zur Minderung der Darlehensschuld.", s1: "Darlehen", s2: "- kein zweites Konto -", h1: "Kasse", h2: "- kein zweites Konto -" },
+        { c: "darlehen", t: "Ein Scheck wird zur Tilgung des Darlehens eingereicht.", s1: "Darlehen", s2: "- kein zweites Konto -", h1: "Bank", h2: "- kein zweites Konto -" },
+        { c: "darlehen", t: "Umwandlung einer Lieferantenrechnung in ein langfristiges Darlehen.", s1: "Verbindlichkeiten a. L. L.", s2: "- kein zweites Konto -", h1: "Darlehen", h2: "- kein zweites Konto -" },
+        { c: "geld", t: "Ersteinzahlung auf das Bankkonto zur Gründung (Kapital).", s1: "Bank", s2: "- kein zweites Konto -", h1: "Eigenkapital", h2: "- kein zweites Konto -" },
+        { c: "fuhrpark", t: "Ein alter LKW wird gegen Rechnung (auf Ziel) verkauft (Buchwert).", s1: "Forderungen a. L. L.", s2: "- kein zweites Konto -", h1: "Fuhrpark", h2: "- kein zweites Konto -" },
+        { c: "bga", t: "Verkauf eines gebrauchten Schreibtischs (Buchwert) bar.", s1: "Kasse", s2: "- kein zweites Konto -", h1: "BGA", h2: "- kein zweites Konto -" }
     ];
 
-    // LEVEL 3: ERFOLGSKONTEN MIT STEUER
+    // --- POOL MEDIUM (60 AUFGABEN) ---
+    const poolMedium = [
+        { c: "miete", t: "Wir bezahlen die monatliche Ladenmiete per Banküberweisung.", s1: "Mietaufwendungen", s2: "- kein zweites Konto -", h1: "Bank", h2: "- kein zweites Konto -" },
+        { c: "miete", t: "Die monatliche Pacht für das Lager wird per Bank bezahlt.", s1: "Mietaufwendungen", s2: "- kein zweites Konto -", h1: "Bank", h2: "- kein zweites Konto -" },
+        { c: "miete", t: "Wir überweisen die Prämie für die Gebäudeversicherung.", s1: "Mietaufwendungen", s2: "- kein zweites Konto -", h1: "Bank", h2: "- kein zweites Konto -" },
+        { c: "miete", t: "Zahlung der Grundsteuer für das Geschäftsgrundstück per Bank.", s1: "Mietaufwendungen", s2: "- kein zweites Konto -", h1: "Bank", h2: "- kein zweites Konto -" },
+        { c: "miete", t: "Reinigungskosten für das Treppenhaus werden bar gezahlt.", s1: "Mietaufwendungen", s2: "- kein zweites Konto -", h1: "Kasse", h2: "- kein zweites Konto -" },
+        { c: "energie", t: "Die Stromrechnung für das Ladenlokal wird per Bank bezahlt.", s1: "Aufwendungen für Energie", s2: "- kein zweites Konto -", h1: "Bank", h2: "- kein zweites Konto -" },
+        { c: "energie", t: "Zahlung der Gasrechnung für die Heizung per Banküberweisung.", s1: "Aufwendungen für Energie", s2: "- kein zweites Konto -", h1: "Bank", h2: "- kein zweites Konto -" },
+        { c: "energie", t: "Barzahlung für die Entsorgung von Verpackungsmüll.", s1: "Aufwendungen für Energie", s2: "- kein zweites Konto -", h1: "Kasse", h2: "- kein zweites Konto -" },
+        { c: "energie", t: "Stromkostenvorschuss für das nächste Quartal per Bank.", s1: "Aufwendungen für Energie", s2: "- kein zweites Konto -", h1: "Bank", h2: "- kein zweites Konto -" },
+        { c: "energie", t: "Wir bezahlen die Wasserrechnung bar.", s1: "Aufwendungen für Energie", s2: "- kein zweites Konto -", h1: "Kasse", h2: "- kein zweites Konto -" },
+        { c: "werbung", t: "Barzahlung einer Werbeanzeige in der Lokalzeitung.", s1: "Werbung", s2: "- kein zweites Konto -", h1: "Kasse", h2: "- kein zweites Konto -" },
+        { c: "werbung", t: "Druck von Werbe-Flyern wird bar bezahlt.", s1: "Werbung", s2: "- kein zweites Konto -", h1: "Kasse", h2: "- kein zweites Konto -" },
+        { c: "werbung", t: "Wir bezahlen für Radiowerbung per Banküberweisung.", s1: "Werbung", s2: "- kein zweites Konto -", h1: "Bank", h2: "- kein zweites Konto -" },
+        { c: "werbung", t: "Zahlung für Online-Anzeigen (Social Media) per Bank.", s1: "Werbung", s2: "- kein zweites Konto -", h1: "Bank", h2: "- kein zweites Konto -" },
+        { c: "werbung", t: "Sponsoringbeitrag für einen Sportverein bar bezahlt.", s1: "Werbung", s2: "- kein zweites Konto -", h1: "Kasse", h2: "- kein zweites Konto -" },
+        { c: "instand", t: "Wir bezahlen die Reparatur der Registrierkasse bar.", s1: "Fremdinstandsetzung", s2: "- kein zweites Konto -", h1: "Kasse", h2: "- kein zweites Konto -" },
+        { c: "instand", t: "Barzahlung für die Reinigung der Verkaufsräume.", s1: "Fremdinstandsetzung", s2: "- kein zweites Konto -", h1: "Kasse", h2: "- kein zweites Konto -" },
+        { c: "instand", t: "Reparatur der Schaufensterscheibe per Überweisung.", s1: "Fremdinstandsetzung", s2: "- kein zweites Konto -", h1: "Bank", h2: "- kein zweites Konto -" },
+        { c: "instand", t: "Wartung der Klimaanlage wird bar bezahlt.", s1: "Fremdinstandsetzung", s2: "- kein zweites Konto -", h1: "Kasse", h2: "- kein zweites Konto -" },
+        { c: "instand", t: "Reparatur am Lieferwagen per Bank bezahlt.", s1: "Fremdinstandsetzung", s2: "- kein zweites Konto -", h1: "Bank", h2: "- kein zweites Konto -" },
+        { c: "provis", t: "Provision für eine Warenvermittlung wird bar eingenommen.", s1: "Kasse", s2: "- kein zweites Konto -", h1: "Provisionserträge", h2: "- kein zweites Konto -" },
+        { c: "provis", t: "Wir zahlen eine Vertreterprovision per Banküberweisung.", s1: "Provisionsaufwendungen", s2: "- kein zweites Konto -", h1: "Bank", h2: "- kein zweites Konto -" },
+        { c: "provis", t: "Gutschrift der Bank für erhaltene Provisionen.", s1: "Bank", s2: "- kein zweites Konto -", h1: "Provisionserträge", h2: "- kein zweites Konto -" },
+        { c: "provis", t: "Wir zahlen eine Provision an einen Partner bar.", s1: "Provisionsaufwendungen", s2: "- kein zweites Konto -", h1: "Kasse", h2: "- kein zweites Konto -" },
+        { c: "zins", t: "Wir überweisen die fälligen Zinsen für ein Darlehen.", s1: "Zinsaufwendungen", s2: "- kein zweites Konto -", h1: "Bank", h2: "- kein zweites Konto -" },
+        { c: "zins", t: "Die Bank schreibt uns Zinsen auf dem Geschäftskonto gut.", s1: "Bank", s2: "- kein zweites Konto -", h1: "Zinserträge", h2: "- kein zweites Konto -" },
+        { c: "zins", t: "Kontoführungsgebühren werden vom Bankkonto abgebucht.", s1: "Zinsaufwendungen", s2: "- kein zweites Konto -", h1: "Bank", h2: "- kein zweites Konto -" },
+        { c: "post", t: "Barkauf von Briefmarken für die Geschäftspost.", s1: "Postgebühren", s2: "- kein zweites Konto -", h1: "Kasse", h2: "- kein zweites Konto -" },
+        { c: "post", t: "Banküberweisung des Rundfunkbeitrags.", s1: "Postgebühren", s2: "- kein zweites Konto -", h1: "Bank", h2: "- kein zweites Konto -" },
+        { c: "post", t: "Zahlung für Telefon- und Internetgebühren per Bank.", s1: "Postgebühren", s2: "- kein zweites Konto -", h1: "Bank", h2: "- kein zweites Konto -" },
+        { c: "ertrag", t: "Ein Mieter überweist uns die Monatsmiete für Büroräume.", s1: "Bank", s2: "- kein zweites Konto -", h1: "Mieterträge", h2: "- kein zweites Konto -" },
+        { c: "ertrag", t: "Wir erhalten Mieterträge für einen Parkplatz bar.", s1: "Kasse", s2: "- kein zweites Konto -", h1: "Mieterträge", h2: "- kein zweites Konto -" },
+        { c: "verkauf", t: "Verkauf von Waren auf Ziel (Nettodarstellung).", s1: "Forderungen a. L. L.", s2: "- kein zweites Konto -", h1: "Umsatzerlöse für Waren", h2: "- kein zweites Konto -" },
+        { c: "einkauf", t: "Wareneinkauf auf Ziel (aufwandsorientiert).", s1: "Aufwendungen für Waren (Wareneinkauf)", s2: "- kein zweites Konto -", h1: "Verbindlichkeiten a. L. L.", h2: "- kein zweites Konto -" },
+        { c: "buero", t: "Barkauf von Druckerpatronen und Toner (Büromaterial).", s1: "Büromaterial", s2: "- kein zweites Konto -", h1: "Kasse", h2: "- kein zweites Konto -" },
+        { c: "buero", t: "Ordner und Register werden bar gekauft.", s1: "Büromaterial", s2: "- kein zweites Konto -", h1: "Kasse", h2: "- kein zweites Konto -" },
+        { c: "buero", t: "Einkauf von Schreibpapier auf Ziel.", s1: "Büromaterial", s2: "- kein zweites Konto -", h1: "Verbindlichkeiten a. L. L.", h2: "- kein zweites Konto -" }
+    ];
+
+    // --- POOL PRO (60 AUFGABEN) ---
     const poolPro = [
         { c: "einkauf", t: "Einkauf von Waren auf Ziel (netto + 19% USt).", s1: "Aufwendungen für Waren (Wareneinkauf)", s2: "Vorsteuer", h1: "Verbindlichkeiten a. L. L.", h2: "- kein zweites Konto -" },
         { c: "verkauf", t: "Verkauf von Waren auf Ziel (netto + 19% USt).", s1: "Forderungen a. L. L.", s2: "- kein zweites Konto -", h1: "Umsatzerlöse für Waren", h2: "Umsatzsteuer" },
+        { c: "einkauf", t: "Wareneinkauf bar (netto 500 € + 95 € Vorsteuer).", s1: "Aufwendungen für Waren (Wareneinkauf)", s2: "Vorsteuer", h1: "Kasse", h2: "- kein zweites Konto -" },
+        { c: "verkauf", t: "Warenverkauf bar (netto 300 € + 57 € USt).", s1: "Kasse", s2: "- kein zweites Konto -", h1: "Umsatzerlöse für Waren", h2: "Umsatzsteuer" },
+        { c: "einkauf", t: "Einkauf von Waren gegen Scheck (brutto 1.190 €).", s1: "Aufwendungen für Waren (Wareneinkauf)", s2: "Vorsteuer", h1: "Bank", h2: "- kein zweites Konto -" },
+        { c: "verkauf", t: "Verkauf von Waren auf Ziel (brutto 595 €).", s1: "Forderungen a. L. L.", s2: "- kein zweites Konto -", h1: "Umsatzerlöse für Waren", h2: "Umsatzsteuer" },
+        { c: "werbung", t: "Wir bezahlen eine Werbeanzeige per Bank (netto + Vorsteuer).", s1: "Werbung", s2: "Vorsteuer", h1: "Bank", h2: "- kein zweites Konto -" },
+        { c: "instand", t: "Reparatur der Ladentür (Rechnung netto + USt) auf Ziel.", s1: "Fremdinstandsetzung", s2: "Vorsteuer", h1: "Verbindlichkeiten a. L. L.", h2: "- kein zweites Konto -" },
+        { c: "energie", t: "Stromrechnung per Überweisung (netto + Vorsteuer).", s1: "Aufwendungen für Energie", s2: "Vorsteuer", h1: "Bank", h2: "- kein zweites Konto -" },
+        { c: "instand", t: "Reparatur am Lieferwagen bar bezahlt (netto + Vorsteuer).", s1: "Fremdinstandsetzung", s2: "Vorsteuer", h1: "Kasse", h2: "- kein zweites Konto -" },
+        { c: "post", t: "Telefonrechnung per Lastschrift (netto + Vorsteuer).", s1: "Postgebühren", s2: "Vorsteuer", h1: "Bank", h2: "- kein zweites Konto -" },
+        { c: "ertrag", t: "Mieteinnahmen Lagerhalle per Bank (netto + Umsatzsteuer).", s1: "Bank", s2: "- kein zweites Konto -", h1: "Mieterträge", h2: "Umsatzsteuer" },
+        { c: "provis", t: "Provision für Warenvermittlung bar erhalten (netto + USt).", s1: "Kasse", s2: "- kein zweites Konto -", h1: "Provisionserträge", h2: "Umsatzsteuer" },
+        { c: "bga", t: "Kauf eines Regals auf Ziel (netto + Vorsteuer).", s1: "BGA", s2: "Vorsteuer", h1: "Verbindlichkeiten a. L. L.", h2: "- kein zweites Konto -" },
+        { c: "fuhrpark", t: "Kauf eines gebrauchten LKWs per Bank (netto + Vorsteuer).", s1: "Fuhrpark", s2: "Vorsteuer", h1: "Bank", h2: "- kein zweites Konto -" },
         { c: "buero", t: "Kauf von Kopierpapier auf Ziel (netto + Vorsteuer).", s1: "Büromaterial", s2: "Vorsteuer", h1: "Verbindlichkeiten a. L. L.", h2: "- kein zweites Konto -" },
         { c: "buero", t: "Barkauf von Büromaterial (netto + Vorsteuer).", s1: "Büromaterial", s2: "Vorsteuer", h1: "Kasse", h2: "- kein zweites Konto -" },
-        { c: "werbung", t: "Wir bezahlen eine Werbeanzeige per Bank (netto + Vorsteuer).", s1: "Werbung", s2: "Vorsteuer", h1: "Bank", h2: "- kein zweites Konto -" },
-        { c: "instand", t: "Fachfirma repariert unsere Ladentür (Rechnung netto + USt auf Ziel).", s1: "Fremdinstandsetzung", s2: "Vorsteuer", h1: "Verbindlichkeiten a. L. L.", h2: "- kein zweites Konto -" },
-        { c: "einkauf", t: "Barkauf von Waren für das Lager (netto + Vorsteuer).", s1: "Aufwendungen für Waren (Wareneinkauf)", s2: "Vorsteuer", h1: "Kasse", h2: "- kein zweites Konto -" },
-        { c: "verkauf", t: "Verkauf von Waren gegen Barzahlung (netto + 19% USt).", s1: "Kasse", s2: "- kein zweites Konto -", h1: "Umsatzerlöse für Waren", h2: "Umsatzsteuer" },
-        { c: "energie", t: "Stromrechnung per Banküberweisung (netto + Vorsteuer).", s1: "Aufwendungen für Energie", s2: "Vorsteuer", h1: "Bank", h2: "- kein zweites Konto -" },
-        { c: "bga", t: "Kauf von Ladenregalen (BGA) auf Ziel (netto + Vorsteuer).", s1: "BGA", s2: "Vorsteuer", h1: "Verbindlichkeiten a. L. L.", h2: "- kein zweites Konto -" },
-        { c: "instand", t: "Wir erhalten Rechnung für Schaufensterreinigung (netto + VSt) auf Ziel.", s1: "Fremdinstandsetzung", s2: "Vorsteuer", h1: "Verbindlichkeiten a. L. L.", h2: "- kein zweites Konto -" },
         { c: "buero", t: "Einkauf von Druckertinte bar (netto + Vorsteuer).", s1: "Büromaterial", s2: "Vorsteuer", h1: "Kasse", h2: "- kein zweites Konto -" },
-        { c: "fuhrpark", t: "Kauf eines Anhängers für den LKW bar (netto + Vorsteuer).", s1: "Fuhrpark", s2: "Vorsteuer", h1: "Kasse", h2: "- kein zweites Konto -" },
-        { c: "provis", t: "Wir erhalten eine Provision per Überweisung (netto + 19% USt).", s1: "Bank", s2: "- kein zweites Konto -", h1: "Provisionserträge", h2: "Umsatzsteuer" },
-        { c: "provis", t: "Wir zahlen eine Vermittlungsprovision per Bank (netto + VSt).", s1: "Provisionsaufwendungen", s2: "Vorsteuer", h1: "Bank", h2: "- kein zweites Konto -" },
-        { c: "energie", t: "Wir bezahlen Heizöl per Bank (netto + Vorsteuer).", s1: "Aufwendungen für Energie", s2: "Vorsteuer", h1: "Bank", h2: "- kein zweites Konto -" },
-        { c: "instand", t: "Reparatur am Schaufenster auf Ziel (netto + USt).", s1: "Fremdinstandsetzung", s2: "Vorsteuer", h1: "Verbindlichkeiten a. L. L.", h2: "- kein zweites Konto -" },
-        { c: "verkauf", t: "Verkauf von Restposten bar (netto + Umsatzsteuer).", s1: "Kasse", s2: "- kein zweites Konto -", h1: "Umsatzerlöse für Waren", h2: "Umsatzsteuer" },
-        { c: "energie", t: "Monatliche Stromvorausrechnung per Bank (netto + VSt).", s1: "Aufwendungen für Energie", s2: "Vorsteuer", h1: "Bank", h2: "- kein zweites Konto -" },
-        { c: "werbung", t: "Kauf von Prospekten bar (Werbung netto + Vorsteuer).", s1: "Werbung", s2: "Vorsteuer", h1: "Kasse", h2: "- kein zweites Konto -" },
-        { c: "fuhrpark", t: "Kauf eines PCs auf Ziel (netto + Vorsteuer).", s1: "BGA", s2: "Vorsteuer", h1: "Verbindlichkeiten a. L. L.", h2: "- kein zweites Konto -" },
-        { c: "provis", t: "Gutschrift der Bank für Provisionen (netto + USt).", s1: "Bank", s2: "- kein zweites Konto -", h1: "Provisionserträge", h2: "Umsatzsteuer" },
         { c: "provis", t: "Wir zahlen Provision an Agenten bar (netto + Vorsteuer).", s1: "Provisionsaufwendungen", s2: "Vorsteuer", h1: "Kasse", h2: "- kein zweites Konto -" },
-        { c: "verkauf", t: "Verkauf eines gebrauchten Kopierers bar (netto + USt).", s1: "Kasse", s2: "- kein zweites Konto -", h1: "BGA", h2: "Umsatzsteuer" },
-        { c: "post", t: "Wir kaufen Briefmarken bar (netto + Vorsteuer).", s1: "Postgebühren", s2: "Vorsteuer", h1: "Kasse", h2: "- kein zweites Konto -" },
-        { c: "instand", t: "Reparatur am Firmen-PKW bar (netto + Vorsteuer).", s1: "Fremdinstandsetzung", s2: "Vorsteuer", h1: "Kasse", h2: "- kein zweites Konto -" },
-        { c: "werbung", t: "Barkauf von Plakaten (netto + Vorsteuer).", s1: "Werbung", s2: "Vorsteuer", h1: "Kasse", h2: "- kein zweites Konto -" },
-        { c: "energie", t: "Wir bezahlen Gasrechnung per Bank (netto + VSt).", s1: "Aufwendungen für Energie", s2: "Vorsteuer", h1: "Bank", h2: "- kein zweites Konto -" },
-        { c: "verkauf", t: "Verkauf eines alten Regals bar (netto + Umsatzsteuer).", s1: "Kasse", s2: "- kein zweites Konto -", h1: "BGA", h2: "Umsatzsteuer" },
-        { c: "instand", t: "Kauf von Reinigungsmittel bar (netto + Vorsteuer).", s1: "Fremdinstandsetzung", s2: "Vorsteuer", h1: "Kasse", h2: "- kein zweites Konto -" },
-        { c: "post", t: "Überweisung der Postfachgebühren (netto + Vorsteuer).", s1: "Postgebühren", s2: "Vorsteuer", h1: "Bank", h2: "- kein zweites Konto -" },
-        { c: "buero", t: "Barkauf von Tonerkartuschen (netto + Vorsteuer).", s1: "Büromaterial", s2: "Vorsteuer", h1: "Kasse", h2: "- kein zweites Konto -" },
-        { c: "werbung", t: "Wir schalten Facebook-Werbung bar (netto + Vorsteuer).", s1: "Werbung", s2: "Vorsteuer", h1: "Kasse", h2: "- kein zweites Konto -" },
-        { c: "verkauf", t: "Verkauf von Altpapier (netto + Umsatzsteuer) bar.", s1: "Kasse", s2: "- kein zweites Konto -", h1: "Umsatzerlöse für Waren", h2: "Umsatzsteuer" },
-        { c: "instand", t: "Wir bezahlen Wartungskosten bar (netto + Vorsteuer).", s1: "Fremdinstandsetzung", s2: "Vorsteuer", h1: "Kasse", h2: "- kein zweites Konto -" },
-        { c: "bga", t: "Barkauf eines Scanners (BGA netto + Vorsteuer).", s1: "BGA", s2: "Vorsteuer", h1: "Kasse", h2: "- kein zweites Konto -" },
-        { c: "werbung", t: "Überweisung der Anzeigenkosten (netto + VSt).", s1: "Werbung", s2: "Vorsteuer", h1: "Bank", h2: "- kein zweites Konto -" },
-        { c: "bga", t: "Kauf eines Aktenschranks auf Ziel (netto + Vorsteuer).", s1: "BGA", s2: "Vorsteuer", h1: "Verbindlichkeiten a. L. L.", h2: "- kein zweites Konto -" },
-        { c: "provis", t: "Provision für Warenvermittlung bar erhalten (netto + USt).", s1: "Kasse", s2: "- kein zweites Konto -", h1: "Provisionserträge", h2: "Umsatzsteuer" },
-        { c: "einkauf", t: "Einkauf von Waren auf Ziel (brutto 1.190 €).", s1: "Aufwendungen für Waren (Wareneinkauf)", s2: "Vorsteuer", h1: "Verbindlichkeiten a. L. L.", h2: "- kein zweites Konto -" },
-        { c: "verkauf", t: "Verkauf von Handelswaren auf Ziel (brutto 2.380 €).", s1: "Forderungen a. L. L.", s2: "- kein zweites Konto -", h1: "Umsatzerlöse für Waren", h2: "Umsatzsteuer" },
-        { c: "buero", t: "Kauf von Schreibpapier bar (netto + Vorsteuer).", s1: "Büromaterial", s2: "Vorsteuer", h1: "Kasse", h2: "- kein zweites Konto -" },
-        { c: "energie", t: "Müllgebühr bar bezahlt (Energie netto + VSt).", s1: "Aufwendungen für Energie", s2: "Vorsteuer", h1: "Kasse", h2: "- kein zweites Konto -" },
-        { c: "miete", t: "Wir vermieten Stellplatz (netto + USt) bar.", s1: "Kasse", s2: "- kein zweites Konto -", h1: "Mieterträge", h2: "Umsatzsteuer" },
-        { c: "buero", t: "Kauf von Lochern und Heftern bar (netto + VSt).", s1: "Büromaterial", s2: "Vorsteuer", h1: "Kasse", h2: "- kein zweites Konto -" },
-        { c: "werbung", t: "Rechnung für Leuchtreklame (netto + USt) auf Ziel.", s1: "Werbung", s2: "Vorsteuer", h1: "Verbindlichkeiten a. L. L.", h2: "- kein zweites Konto -" },
-        { c: "instand", t: "Reparatur der Klimaanlage per Bank (netto + VSt).", s1: "Fremdinstandsetzung", s2: "Vorsteuer", h1: "Bank", h2: "- kein zweites Konto -" },
-        { c: "einkauf", t: "Wareneinkauf bar (netto 500 € + 95 € VSt).", s1: "Aufwendungen für Waren (Wareneinkauf)", s2: "Vorsteuer", h1: "Kasse", h2: "- kein zweites Konto -" },
-        { c: "verkauf", t: "Warenverkauf bar (netto 300 € + 57 € USt).", s1: "Kasse", s2: "- kein zweites Konto -", h1: "Umsatzerlöse für Waren", h2: "Umsatzsteuer" },
-        { c: "post", t: "Telefonrechnung per Lastschrift (netto + VSt).", s1: "Postgebühren", s2: "Vorsteuer", h1: "Bank", h2: "- kein zweites Konto -" },
-        { c: "energie", t: "Heizkostenabrechnung per Bank (netto + VSt).", s1: "Aufwendungen für Energie", s2: "Vorsteuer", h1: "Bank", h2: "- kein zweites Konto -" },
-        { c: "buero", t: "Kauf von Versandtaschen bar (netto + VSt).", s1: "Büromaterial", s2: "Vorsteuer", h1: "Kasse", h2: "- kein zweites Konto -" },
-        { c: "instand", t: "Fensterreinigung bar bezahlt (netto + VSt).", s1: "Fremdinstandsetzung", s2: "Vorsteuer", h1: "Kasse", h2: "- kein zweites Konto -" },
-        { c: "miete", t: "Mieteinnahmen Lagerhalle per Bank (netto + USt).", s1: "Bank", s2: "- kein zweites Konto -", h1: "Mieterträge", h2: "Umsatzsteuer" },
-        { c: "werbung", t: "Radiowerbung per Bank bezahlt (netto + VSt).", s1: "Werbung", s2: "Vorsteuer", h1: "Bank", h2: "- kein zweites Konto -" },
-        { c: "fuhrpark", t: "Reifenwechsel Firmen-LKW bar (netto + VSt).", s1: "Fremdinstandsetzung", s2: "Vorsteuer", h1: "Kasse", h2: "- kein zweites Konto -" },
-        { c: "provis", t: "Vermittlungsprovision bar gezahlt (netto + VSt).", s1: "Provisionsaufwendungen", s2: "Vorsteuer", h1: "Kasse", h2: "- kein zweites Konto -" },
-        { c: "bga", t: "Kauf von Schaufenstermaterial bar (netto + VSt).", s1: "Werbung", s2: "Vorsteuer", h1: "Kasse", h2: "- kein zweites Konto -" },
-        { c: "verkauf", t: "Verkauf von Waren auf Ziel (brutto 595 €).", s1: "Forderungen a. L. L.", s2: "- kein zweites Konto -", h1: "Umsatzerlöse für Waren", h2: "Umsatzsteuer" },
-        { c: "einkauf", t: "Einkauf von Waren auf Ziel (brutto 119 €).", s1: "Aufwendungen für Waren (Wareneinkauf)", s2: "Vorsteuer", h1: "Verbindlichkeiten a. L. L.", h2: "- kein zweites Konto -" },
         { c: "instand", t: "Wartung der EDV per Bank (netto + VSt).", s1: "Fremdinstandsetzung", s2: "Vorsteuer", h1: "Bank", h2: "- kein zweites Konto -" }
     ];
 
     let mode = ''; let currentPool = []; let taskCount = 0; let correctCount = 0; const maxTasks = 10;
 
-    // INTELLIGENTE MISCH-LOGIK: Verhindert identische Kategorien (c) hintereinander
+    function checkLevelLocks() {
+        const solvedLight = parseInt(localStorage.getItem('solved_light') || 0);
+        const solvedMedium = parseInt(localStorage.getItem('solved_medium') || 0);
+        document.getElementById('info-light').innerText = "Gelöst: " + solvedLight;
+        const btnMed = document.getElementById('btn-medium');
+        if (solvedLight >= 30) {
+            btnMed.disabled = false;
+            btnMed.innerHTML = "2. Fortgeschritten 🔓 <span class='lock-info'>Gelöst: " + solvedMedium + "</span>";
+        } else {
+            document.getElementById('info-medium').innerText = "Sperre: Noch " + (30 - solvedLight) + " Einsteiger-Fragen lösen";
+        }
+        const btnPro = document.getElementById('btn-pro');
+        if (solvedMedium >= 20) {
+            btnPro.disabled = false;
+            btnPro.innerHTML = "3. Profi 🔓 <span class='lock-info'>Viel Erfolg!</span>";
+        } else {
+            document.getElementById('info-pro').innerText = "Sperre: Noch " + (20 - solvedMedium) + " Mittel-Fragen lösen";
+        }
+    }
+
+    function resetAllProgress() {
+        if(confirm("Lernstand löschen?")) { localStorage.clear(); location.reload(); }
+    }
+
+    function backToMenu() {
+        document.getElementById('results').style.display = 'none';
+        document.getElementById('menu').style.display = 'block';
+        checkLevelLocks();
+    }
+
     function getSmartPool(pool) {
         let shuffled = [...pool].sort(() => Math.random() - 0.5);
-        let result = [];
-        let lastCat = "";
+        let result = []; let lastCat = "";
         while (result.length < 10 && shuffled.length > 0) {
             let index = shuffled.findIndex(item => item.c !== lastCat);
             if (index === -1) index = 0; 
             let picked = shuffled.splice(index, 1)[0];
-            result.push(picked);
-            lastCat = picked.c;
+            result.push(picked); lastCat = picked.c;
         }
         return result;
     }
@@ -291,45 +267,33 @@
         mode = m; taskCount = 0; correctCount = 0;
         document.getElementById('menu').style.display = 'none';
         document.getElementById('game').style.display = 'block';
-        document.getElementById('levelDisplay').innerText = "Level: " + (m === 'light' ? 'Einsteiger' : m === 'medium' ? 'Fortgeschritten' : 'Profi');
+        document.getElementById('levelDisplay').innerText = "Level: " + (m === 'light' ? 'Einsteiger' : m === 'medium' ? 'Mittel' : 'Profi');
         setupDropdowns();
-        const showSplit = (mode === 'pro') ? 'block' : 'none';
-        document.getElementById('soll2-box').style.display = showSplit;
-        document.getElementById('haben2-box').style.display = showSplit;
+        document.getElementById('soll2-box').style.display = (mode === 'pro') ? 'block' : 'none';
+        document.getElementById('haben2-box').style.display = (mode === 'pro') ? 'block' : 'none';
         let basePool = mode === 'light' ? poolLight : mode === 'medium' ? poolMedium : poolPro;
         currentPool = getSmartPool(basePool);
         generateTask();
     }
 
     function setupDropdowns() {
-        const selects = ['soll1', 'soll2', 'haben1', 'haben2'];
-        selects.forEach(id => {
-            const s = document.getElementById(id);
-            s.innerHTML = "";
+        ['soll1', 'soll2', 'haben1', 'haben2'].forEach(id => {
+            const s = document.getElementById(id); s.innerHTML = "";
             kontenListe.sort().forEach(k => s.add(new Option(k, k)));
         });
     }
 
     function generateTask() {
         if (taskCount >= maxTasks) { showFinalResults(); return; }
-        currentTask = currentPool[taskCount];
-        taskCount++;
-        updateUI();
+        currentTask = currentPool[taskCount]; taskCount++;
         document.getElementById('taskDisplay').innerText = currentTask.t;
         document.getElementById('feedback').style.display = 'none';
         document.getElementById('checkBtn').style.display = 'block';
         document.getElementById('nextBtn').style.display = 'none';
         document.getElementById('soll1').selectedIndex = 0;
         document.getElementById('haben1').selectedIndex = 0;
-        if(mode === 'pro') {
-            document.getElementById('soll2').value = "- kein zweites Konto -";
-            document.getElementById('haben2').value = "- kein zweites Konto -";
-        }
-    }
-
-    function updateUI() {
-        document.getElementById('counterDisplay').innerText = `Aufgabe ${taskCount}/${maxTasks}`;
         document.getElementById('progressBar').style.width = (taskCount / maxTasks * 100) + "%";
+        document.getElementById('counterDisplay').innerText = `Aufgabe ${taskCount}/${maxTasks}`;
     }
 
     function checkAnswer() {
@@ -337,11 +301,21 @@
         const s2 = (mode === 'pro') ? document.getElementById('soll2').value : "- kein zweites Konto -";
         const h1 = document.getElementById('haben1').value;
         const h2 = (mode === 'pro') ? document.getElementById('haben2').value : "- kein zweites Konto -";
-        if (s1 === "-- bitte wählen --" || h1 === "-- bitte wählen --") { alert("Bitte Konten wählen!"); return; }
-        const isCorrect = ((s1 === currentTask.s1 && s2 === currentTask.s2) || (s1 === currentTask.s2 && s2 === currentTask.s1)) && ((h1 === currentTask.h1 && h2 === currentTask.h2) || (h1 === currentTask.h2 && h2 === currentTask.h1));
+        if (s1 === "-- bitte wählen --" || h1 === "-- bitte wählen --") { alert("Konten wählen!"); return; }
+        const isCorrect = ((s1 === currentTask.s1 && s2 === currentTask.s2) || (s1 === currentTask.s2 && s2 === currentTask.s1)) && 
+                          ((h1 === currentTask.h1 && h2 === currentTask.h2) || (h1 === currentTask.h2 && h2 === currentTask.h1));
         const fb = document.getElementById('feedback');
-        if (isCorrect) { correctCount++; fb.innerText = "✓ Richtig!"; fb.className = "feedback correct"; } 
-        else { let sol = `${currentTask.s1}${currentTask.s2 !== "- kein zweites Konto -" ? ' + ' + currentTask.s2 : ''} AN ${currentTask.h1}${currentTask.h2 !== "- kein zweites Konto -" ? ' + ' + currentTask.h2 : ''}`; fb.innerText = `✗ Falsch. Lösung:\n${sol}`; fb.className = "feedback wrong"; }
+        if (isCorrect) {
+            correctCount++;
+            let key = (mode === 'light') ? 'solved_light' : (mode === 'medium') ? 'solved_medium' : 'solved_pro';
+            let currentSolved = parseInt(localStorage.getItem(key) || 0);
+            localStorage.setItem(key, currentSolved + 1);
+            fb.innerText = "✓ Richtig!"; fb.className = "feedback correct";
+        } else {
+            let sol = `${currentTask.s1}${currentTask.s2 !== "- kein zweites Konto -" ? ' + ' + currentTask.s2 : ''} AN ${currentTask.h1}${currentTask.h2 !== "- kein zweites Konto -" ? ' + ' + currentTask.h2 : ''}`;
+            fb.innerText = `✗ Falsch. Lösung:\n${sol}`;
+            fb.className = "feedback wrong";
+        }
         fb.style.display = 'block'; document.getElementById('checkBtn').style.display = 'none'; document.getElementById('nextBtn').style.display = 'block';
     }
 
@@ -349,15 +323,7 @@
         document.getElementById('game').style.display = 'none';
         document.getElementById('results').style.display = 'block';
         document.getElementById('currentScore').innerText = correctCount;
-        let totalRounds = parseInt(localStorage.getItem('fibu_total_rounds') || 0) + 1;
-        localStorage.setItem('fibu_total_rounds', totalRounds);
-        document.getElementById('totalRounds').innerText = totalRounds;
-        const best = localStorage.getItem('fibu_best_' + mode) || 0;
-        document.getElementById('bestScore').innerText = best;
-        document.getElementById('recMode').innerText = mode.toUpperCase();
         if (correctCount === 10) confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
-        if (correctCount > best) { document.getElementById('comparisonText').innerText = "Neuer Rekord! Fantastisch!"; localStorage.setItem('fibu_best_' + mode, correctCount); }
-        else { document.getElementById('comparisonText').innerText = "Regelmäßiges Training führt zum Erfolg!"; }
     }
 </script>
 </body>
